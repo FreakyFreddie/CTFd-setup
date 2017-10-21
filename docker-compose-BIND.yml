@@ -1,0 +1,14 @@
+services:
+  bind:
+    image: sameersbn/bind:9.9.5-20161106
+    restart: always
+    ports:
+    - "53:53/udp"
+    - "53:53/tcp"
+    volumes:
+    - .data/bind:/data
+    environment:
+    - WEBMIN_ENABLED=false
+    commands:
+      Customize defines inside bind-restapi.py
+      python bind-restapi.py start
