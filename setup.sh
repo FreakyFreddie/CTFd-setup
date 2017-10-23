@@ -6,36 +6,44 @@ then
 	exit 1
 fi
 
-#PARAMETERS
-SYSTEM_USER="";
-CTF_NAME="CTF_Platform";
-CTFd_REPOSITORY="https://github.com/CTFd/CTFd";
+#----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
+SYSTEM_USER="ubuntu";
+CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #CTF NETWORK SETTINGS (users connect to this interface)
-CTF_IFACE="ens160";
+CTF_IFACE="ens33";
 CTF_IP="192.168.5.4";
 CTF_SUBNET="255.255.248.0";
 CTF_GATEWAY="192.168.4.1";
 CTF_DNS="192.168.4.1";
 
 #VM MANAGEMENT NETWORK SETTINGS (used to manage the VM through SSH)
-VM_MANAGEMENT_IFACE="ens192";
+VM_MANAGEMENT_IFACE="ens38";
 VM_MANAGEMENT_IP="192.168.2.4";
 VM_MANAGEMENT_SUBNET="255.255.255.0";
 VM_MANAGEMENT_GATEWAY="192.168.2.1";
 
 #HYPERVISOR MANAGEMENT NETWORK SETTINGS (used to connect to vCenter server API )
-HV_MANAGEMENT_IFACE="ens224";
+HV_MANAGEMENT_IFACE="ens39";
 HV_MANAGEMENT_IP="192.168.1.254";
 HV_MANAGEMENT_SUBNET="255.255.255.0";
 HV_MANAGEMENT_GATEWAY="192.168.1.1";
 
-#USED TO CONFIGURE DNS SERVER
-CTF_DNS_IP="192.168.5.2";
+#USED TO CONFIGURE DNS CONTAINER
+CTF_DNS_IP="192.168.5.4";
+CTF_REVERSE_DNS=$(echo $CTF_DNS_IP | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}');
+CTF_DNS_API_PORT="29375";
+#GENERATE RANDOM API KEY OF 32 ALPHANUMERICAL CHARACTERS AND TAKE THE FIRST
+CTF_DNS_API_KEY="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)";
 
 #DNS RECORD
-DNS_ROOT="myctf.be";
-DNS_NAME="ctf";
+CTF_DNS_ROOT="myctf.be";
+CTF_NAME="ctf";
+
+#MARIADB CONTAINER CONFIG
+$MARIADB_ROOT_PASS="CTFd"
+$MARIADB_USER="CTFd"
+$MARIADB_PASS="CTFd"
 
 #add plugins to install
 PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
@@ -50,6 +58,7 @@ path = /home/$SYSTEM_USER/$CTF_NAME
 valid users = $SAMBA_USER
 read only = no";
 
+#-----------------------------------------------------------------------------------------------------------------------------------------#
 #----------------------------------------------------------NETWORK CONFIGURATION----------------------------------------------------------#
 echo "Removing automaticly configured interfaces to CTF Platform networks...";
 
@@ -117,7 +126,7 @@ ifup $HV_MANAGEMENT_IFACE;
 
 echo "Done.";
 #-----------------------------------------------------------------------------------------------------------------------------------------#
-#-------------------------------------------------------------CTFd CONFIGURATION----------------------------------------------------------#
+#--------------------------------------------------------------PRE INSTALLATION-----------------------------------------------------------#
 
 echo "Updating package list & upgrading packages...";
 
@@ -152,24 +161,94 @@ usermod -aG docker $SYSTEM_USER;
 systemctl enable docker;
 
 echo "Done.";
-echo "Cloning CTFd into home directory...";
+
+#-----------------------------------------------------------------------------------------------------------------------------------------#
+#--------------------------------------------------------DNS CONTAINER CONFIGURATION------------------------------------------------------#
+# Generate Docker file with environment variables set
+
+echo "Generating Docker configuration for DNS container...";
+
+#if bind directory does not exists, move bind directory there
+if [ ! -d /home/$SYSTEM_USER/bind ]; then
+    mv ./bind /home/$SYSTEM_USER/bind;
+fi
 
 #GO TO HOME DIRECTORY
 cd /home/$SYSTEM_USER;
 
-#CREATE FILE SHARE MAP
-mkdir ./$CTF_NAME
+echo "FROM debian:latest" > ./bind/Dockerfile;
+echo "ENV	CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
+echo "	CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
+echo "	CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
+echo "	CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
+echo "	CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
+echo "	CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
+echo "	CTF_DNS_NAME=$CTF_DNS_NAME" >> ./bind/Dockerfile;
+echo "RUN apt-get update -y && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
+echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
+echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
+echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
+echo "CMD [\"/usr/sbin/named -f\"]" >> ./bind/Dockerfile;
 
-#GO INSIDE NEW SHARE
-cd ./$CTF_NAME;
+echo "Done.";
 
-#ADD PLUGINS
-mkdir plugins
-cd ./plugins
+#-----------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------------CTF CONFIGURATION------------------------------------------------------------#
+
+echo "Cloning CTFd into home directory...";
+
 git clone ${CTFd_REPOSITORY};
 
 echo "Done.";
+echo "Recreating docker-compose.yml with new configuration...";
+
+echo "version: \'2\'" > ./CTFd/docker-compose.yml;
+echo "" >> ./CTFd/docker-compose.yml;
+echo "services:" > ./CTFd/docker-compose.yml;
+
+echo "  CTFd:" >> ./CTFd/docker-compose.yml;
+echo "    build: ." >> ./CTFd/docker-compose.yml;
+echo "    restart: always" >> ./CTFd/docker-compose.yml;
+echo "    ports:" >> ./CTFd/docker-compose.yml;
+echo "      - \"8000:8000\"" >> ./CTFd/docker-compose.yml;
+echo "    environment:" >> ./CTFd/docker-compose.yml;
+echo "      - DATABASE_URL=mysql+pymysql://root:CTFd@db/CTFd" >> ./CTFd/docker-compose.yml;
+echo "    volumes:" >> ./CTFd/docker-compose.yml;
+echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
+echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
+echo "    depends_on:" >> ./CTFd/docker-compose.yml;
+echo "      - db" >> ./CTFd/docker-compose.yml;
+echo "      - bind" >> ./CTFd/docker-compose.yml;
+echo "" >> ./CTFd/docker-compose.yml;
+
+echo "Added CTFd service (1/3).";
+
+echo "  db:" >> ./CTFd/docker-compose.yml;
+echo "    image: mariadb:10.2" >> ./CTFd/docker-compose.yml;
+echo "    environment:" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_ROOT_PASSWORD=$MARIADB_ROOT_PASS" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_USER=$MARIADB_USER" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_PASSWORD=$MARIADB_PASS" >> ./CTFd/docker-compose.yml;
+echo "    volumes:" >> ./CTFd/docker-compose.yml;
+echo "      - .data/mysql:/var/lib/mysql" >> ./CTFd/docker-compose.yml;
+echo "" >> ./CTFd/docker-compose.yml;
+
+echo "Added db service (2/3).";
+
+echo "  bind:" >> ./CTFd/docker-compose.yml;
+echo "    build: ../bind" >> ./CTFd/docker-compose.yml;
+echo "    restart: always" >> ./CTFd/docker-compose.yml;
+echo "    ports:" >> ./CTFd/docker-compose.yml;
+echo "    - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
+echo "    - \"53:53/tcp\"" >> ./CTFd/docker-compose.yml;
+echo "    - \"$CTF_DNS_API_PORT:$CTF_DNS_API_PORT\"" >> ./CTFd/docker-compose.yml;
+echo "    volumes:" >> ./CTFd/docker-compose.yml;
+echo "    - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
+
+echo "Added bind service (3/3).";
 echo "Cloning plugins...";
+
+cd ./CTFd/CTFd/plugins;
 
 #still needs work (copy directly into plugin folder)
 for i in "${PLUGINS[@]}"
@@ -177,11 +256,11 @@ do
    git clone $i;
    echo "Cloned $i.";
 done
-cd ..
-cp -r ./plugins/* ./CTFd/CTFd/plugins/
 
 echo "Done.";
 echo "Launching platform...";
+
+cd ../..;
 
 #DEV - CREATE SAMBA SHARE FOR DIRECTORY CTFd (easy log access)
 #apt-get install samba -y;
@@ -199,6 +278,8 @@ docker-compose up;
 #SETUP NGINX REVERSE PROXY CONTAINER
 #SETUP DNS SERVER CONTAINER
 #ADD DNS RECORD
+
+echo "The platform can be reached on https://$CTF_IP:8000.";
 
 #reset hostname
 cat /dev/null > /etc/hostname
