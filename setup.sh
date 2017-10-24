@@ -151,8 +151,14 @@ echo "Internet access detected.";
 echo "Updating package list & upgrading packages...";
 
 #UPDATES
-apt-get update -y;
-apt-get upgrade -y;
+apt-get update;
+
+if ! apt-get upgrade -y;
+then
+    echo >&2 message;
+    echo "Unable to upgrade packages. Exiting...";
+    exit 1;
+fi
 
 echo "Done.";
 
@@ -211,7 +217,7 @@ echo "	CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
 echo "	CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
 echo "	CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "	CTF_DNS_NAME=$CTF_DNS_NAME" >> ./bind/Dockerfile;
-echo "RUN apt-get update -y && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
+echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
