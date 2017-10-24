@@ -238,17 +238,16 @@ fi
 echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
 
-echo "version: \'2\'" > ./CTFd/docker-compose.yml;
+echo "version: '2'" > ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
-echo "services:" > ./CTFd/docker-compose.yml;
-
-echo "  CTFd:" >> ./CTFd/docker-compose.yml;
+echo "services:" >> ./CTFd/docker-compose.yml;
+echo "  ctfd:" >> ./CTFd/docker-compose.yml;
 echo "    build: ." >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"8000:8000\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
-echo "      - DATABASE_URL=mysql+pymysql://root:CTFd@db/CTFd" >> ./CTFd/docker-compose.yml;
+echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_USER@db/ctfd" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
@@ -272,7 +271,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added db service (2/3).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
-echo "    build: /home/$SYSTEM_USER/bind" >> ./CTFd/docker-compose.yml;
+echo "    build: /home/$SYSTEM_USER/bind/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
