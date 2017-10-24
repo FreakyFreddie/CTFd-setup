@@ -2,8 +2,8 @@
 #Use this script to easily set up the CTF Platform on Ubuntu 16.04 LTS
 if [ $EUID -ne 0 ]
 then
-	echo "RUN THE SCRIPT AS ROOT."
-	exit 1
+	echo "RUN THE SCRIPT AS ROOT.";
+	exit 1;
 fi
 
 #----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
@@ -12,10 +12,10 @@ CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #CTF NETWORK SETTINGS (users connect to this interface)
 CTF_IFACE="ens33";
-CTF_IP="192.168.5.4";
-CTF_SUBNET="255.255.248.0";
-CTF_GATEWAY="192.168.4.1";
-CTF_DNS="192.168.4.1";
+CTF_IP="10.0.7.4";
+CTF_SUBNET="255.255.252.0";
+CTF_GATEWAY="10.0.4.1";
+CTF_DNS="10.0.7.4";
 
 #VM MANAGEMENT NETWORK SETTINGS (used to manage the VM through SSH)
 VM_MANAGEMENT_IFACE="ens38";
@@ -30,20 +30,19 @@ HV_MANAGEMENT_SUBNET="255.255.255.0";
 HV_MANAGEMENT_GATEWAY="192.168.1.1";
 
 #USED TO CONFIGURE DNS CONTAINER
-CTF_DNS_IP="192.168.5.4";
+CTF_DNS_IP="10.0.7.4";
 CTF_REVERSE_DNS=$(echo $CTF_DNS_IP | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}');
 CTF_DNS_API_PORT="29375";
 #GENERATE RANDOM API KEY OF 32 ALPHANUMERICAL CHARACTERS AND TAKE THE FIRST
 CTF_DNS_API_KEY="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)";
-
 #DNS RECORD
 CTF_DNS_ROOT="myctf.be";
 CTF_NAME="ctf";
 
 #MARIADB CONTAINER CONFIG
-$MARIADB_ROOT_PASS="CTFd"
-$MARIADB_USER="CTFd"
-$MARIADB_PASS="CTFd"
+MARIADB_ROOT_PASS="CTFd"
+MARIADB_USER="CTFd"
+MARIADB_PASS="CTFd"
 
 #add plugins to install
 PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
@@ -66,7 +65,6 @@ echo "Removing automaticly configured interfaces to CTF Platform networks...";
 sed -i "/$CTF_IFACE/d" /etc/network/interfaces;
 sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 sed -i "/$HV_MANAGEMENT_IFACE/d" /etc/network/interfaces;
-
 
 echo "Done.";
 echo "Configuring CTF Platform network interfaces..."
@@ -111,20 +109,41 @@ echo "" >> /etc/network/interfaces;
 echo "Hypervisor management network configured. (3/3)";
 echo "Starting CTF network interface...";
 
-ifup $CTF_IFACE;
+if ! ifup $CTF_IFACE;
+then
+    echo "Unable to bring up $CTF_IFACE. Exiting...";
+    exit 1;
+fi
 
 echo "Done.";
 echo "Starting VM management interface...";
 
-ifup $VM_MANAGEMENT_IFACE;
+if ! ifup $VM_MANAGEMENT_IFACE;
+then
+    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
+    exit 1;
+fi
 
 echo "Done.";
 echo "Starting Hypervisor management interface...";
 
-#DOWN & UP THE INTERFACES
-ifup $HV_MANAGEMENT_IFACE;
+if ! ifup $HV_MANAGEMENT_IFACE;
+then
+    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
+    exit 1;
+fi
 
 echo "Done.";
+echo "Testing network connection...";
+
+#If machine has internet, continue
+if ! ping -c 4 8.8.8.8
+then
+    echo "No internet access. Exiting...";
+    exit 1;
+fi
+
+echo "Internet access detected.";
 #-----------------------------------------------------------------------------------------------------------------------------------------#
 #--------------------------------------------------------------PRE INSTALLATION-----------------------------------------------------------#
 
@@ -135,12 +154,12 @@ apt-get update -y;
 apt-get upgrade -y;
 
 echo "Done.";
-echo "Adding SSH access...";
 
 #ADD SSH ACCESS (optional)
+echo "Adding SSH access...";
 apt-get install openssh-server -y;
-
 echo "Done.";
+
 echo "Installing CTFd dependencies...";
 
 #INSTALL DEPENDENCIES
@@ -151,14 +170,14 @@ apt-get install docker -y;
 apt-get install docker-compose -y;
 
 echo "Done.";
-echo "Configuring Docker...";
+echo "Configuring Docker to start on boot...";
 
-# Add user to the docker group
-# Warning: The docker group grants privileges equivalent to the root user. 
-usermod -aG docker $SYSTEM_USER;
-
-# Configure Docker to start on boot
-systemctl enable docker;
+# Configure Docker daemon to start on boot
+if ! systemctl enable docker
+then
+    echo "Unable to configure Docker to start on boot. Exiting...";
+    exit 1;
+fi
 
 echo "Done.";
 
@@ -197,7 +216,11 @@ echo "Done.";
 
 echo "Cloning CTFd into home directory...";
 
-git clone ${CTFd_REPOSITORY};
+if ! git clone ${CTFd_REPOSITORY}
+then
+    echo >&2 message;
+    exit 1;
+fi
 
 echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
@@ -253,8 +276,12 @@ cd ./CTFd/CTFd/plugins;
 #still needs work (copy directly into plugin folder)
 for i in "${PLUGINS[@]}"
 do
-   git clone $i;
-   echo "Cloned $i.";
+   	if ! git clone $i
+	then
+	    echo >&2 message;
+	    exit 1;
+	fi
+   	echo "Cloned $i.";
 done
 
 echo "Done.";

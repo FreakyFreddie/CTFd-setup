@@ -71,8 +71,8 @@ echo "ns2                     IN      A       $CTF_DNS_IP" >> /etc/bind/zones/$C
 echo "www                     IN      CNAME   http://$CTF_DNS_ROOT." >> /etc/bind/zones/$CTF_DNS_ROOT;
 echo "$CTF_NAME           			IN    	CNAME   	http://$CTF_DNS_ROOT." >> /etc/bind/zones/$CTF_DNS_ROOT;
 
-touch /etc/bind/zones/reverse/rev.101.34.192
-chown root:bind /etc/bind/zones/reverse/rev.101.34.192
+touch /etc/bind/zones/reverse/rev.$CTF_REVERSE_DNS
+chown root:bind /etc/bind/zones/reverse/rev.$CTF_REVERSE_DNS
 
 echo '$TTL 604800' >> /etc/bind/zones/reverse/rev.$CTF_REVERSE_DNS;
 echo "@       IN      SOA     ns1.$CTF_DNS_ROOT. admin.$CTF_DNS_ROOT. (" >> /etc/bind/zones/reverse/rev.$CTF_REVERSE_DNS;
