@@ -202,7 +202,8 @@ fi
 #GO TO HOME DIRECTORY
 cd /home/$SYSTEM_USER;
 
-echo "FROM debian:latest" > ./bind/Dockerfile;
+touch ./bind/Dockerfile
+echo "FROM debian:latest" >> ./bind/Dockerfile;
 echo "ENV	CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
 echo "	CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "	CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
