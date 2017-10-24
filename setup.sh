@@ -187,6 +187,12 @@ echo "Done.";
 
 echo "Generating Docker configuration for DNS container...";
 
+#if system user's directory does not exists, exit
+if [ ! -d /home/$SYSTEM_USER ]; then
+	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again."
+   	exit 1;
+fi
+
 #if bind directory does not exists, move bind directory there
 if [ ! -d /home/$SYSTEM_USER/bind ]; then
     mv ./bind /home/$SYSTEM_USER/bind;
