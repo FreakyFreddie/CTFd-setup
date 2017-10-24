@@ -7,24 +7,28 @@ then
 fi
 
 #----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
-SYSTEM_USER="ubuntu";
+SYSTEM_USER="";
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
-#CTF NETWORK SETTINGS (users connect to this interface)
-CTF_IFACE="ens33";
+#plugins to install
+PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
+#PLUGINS[1]="https://github.com/FreakyFreddie/CTFd-challenge-VMs-plugin"
+
+#CTF NETWORK SETTINGS (users connect to this interface, VLAN 15)
+CTF_IFACE="ens160";
 CTF_IP="10.0.7.4";
 CTF_SUBNET="255.255.252.0";
 CTF_GATEWAY="10.0.4.1";
 CTF_DNS="10.0.7.4";
 
-#VM MANAGEMENT NETWORK SETTINGS (used to manage the VM through SSH)
-VM_MANAGEMENT_IFACE="ens38";
+#VM MANAGEMENT NETWORK SETTINGS (used to manage the VM through SSH, VLAN 10)
+VM_MANAGEMENT_IFACE="ens192";
 VM_MANAGEMENT_IP="192.168.2.4";
 VM_MANAGEMENT_SUBNET="255.255.255.0";
 VM_MANAGEMENT_GATEWAY="192.168.2.1";
 
-#HYPERVISOR MANAGEMENT NETWORK SETTINGS (used to connect to vCenter server API )
-HV_MANAGEMENT_IFACE="ens39";
+#HYPERVISOR MANAGEMENT NETWORK SETTINGS (used to connect to vCenter server API, VLAN 5)
+HV_MANAGEMENT_IFACE="ens224";
 HV_MANAGEMENT_IP="192.168.1.254";
 HV_MANAGEMENT_SUBNET="255.255.255.0";
 HV_MANAGEMENT_GATEWAY="192.168.1.1";
@@ -44,12 +48,8 @@ MARIADB_ROOT_PASS="CTFd"
 MARIADB_USER="CTFd"
 MARIADB_PASS="CTFd"
 
-#add plugins to install
-PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
-#PLUGINS[1]="https://github.com/FreakyFreddie/CTFd-challenge-VMs-plugin"
-
 #configuration for samba share (optional/easy way to access logs)
-SAMBA_USER="ubuntu"
+SAMBA_USER=""
 SAMBA_PASS=""
 SAMBA_CONFIG=/etc/samba/smb.conf;
 FILE_SHARE="[$CTF_NAME]
