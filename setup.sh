@@ -218,7 +218,7 @@ echo "	CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
 echo "	CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "	CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
 echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
-echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
+echo "COPY $SCRIPT_DIRECTORY/bind/entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
 echo "CMD [\"/usr/sbin/named -f\"]" >> ./bind/Dockerfile;
@@ -273,14 +273,14 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added db service (2/3).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
-echo "    build: ../bind" >> ./CTFd/docker-compose.yml;
+echo "    build: /home/$SYSTEM_USER/bind" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
-echo "    - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
-echo "    - \"53:53/tcp\"" >> ./CTFd/docker-compose.yml;
-echo "    - \"$CTF_DNS_API_PORT:$CTF_DNS_API_PORT\"" >> ./CTFd/docker-compose.yml;
+echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
+echo "      - \"53:53/tcp\"" >> ./CTFd/docker-compose.yml;
+echo "      - \"$CTF_DNS_API_PORT:$CTF_DNS_API_PORT\"" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
-echo "    - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
+echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
 
 echo "Added bind service (3/3).";
 echo "Cloning plugins...";
@@ -313,7 +313,12 @@ cd ../..;
 #LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
 #CHANGE DOCKER-COMPOSE PASSWORDS
 cd CTFd;
-docker-compose up;
+
+if ! docker-compose up
+then
+    echo >&2 message;
+    exit 1;
+fi
 #-----------------------------------------------------------------------------------------------------------------------------------------#
 
 #SETUP NGINX REVERSE PROXY CONTAINER
