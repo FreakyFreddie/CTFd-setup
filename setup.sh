@@ -155,7 +155,6 @@ apt-get update;
 
 if ! apt-get upgrade -y;
 then
-    echo >&2 message;
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
 fi
@@ -232,7 +231,7 @@ echo "Cloning CTFd into home directory...";
 
 if ! git clone ${CTFd_REPOSITORY}
 then
-    echo >&2 message;
+	echo "git clone ${CTFd_REPOSITORY} failed. Exiting...";
     exit 1;
 fi
 
@@ -292,7 +291,7 @@ for i in "${PLUGINS[@]}"
 do
    	if ! git clone $i
 	then
-	    echo >&2 message;
+		echo "git clone $i failed. Exiting..."
 	    exit 1;
 	fi
    	echo "Cloned $i.";
@@ -316,7 +315,7 @@ cd CTFd;
 
 if ! docker-compose up
 then
-    echo >&2 message;
+    echo "Unable to launch containers. Exiting...";
     exit 1;
 fi
 #-----------------------------------------------------------------------------------------------------------------------------------------#
