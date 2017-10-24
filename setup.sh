@@ -209,13 +209,13 @@ cd /home/$SYSTEM_USER;
 
 touch ./bind/Dockerfile
 echo "FROM debian:latest" >> ./bind/Dockerfile;
-echo "ENV	CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
-echo "	CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
-echo "	CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
-echo "	CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
-echo "	CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
-echo "	CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
-echo "	CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
+echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
+echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
+echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
 echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
 echo "COPY $SCRIPT_DIRECTORY/bind/entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
@@ -260,6 +260,7 @@ echo "Added CTFd service (1/3).";
 
 echo "  db:" >> ./CTFd/docker-compose.yml;
 echo "    image: mariadb:10.2" >> ./CTFd/docker-compose.yml;
+echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - MYSQL_ROOT_PASSWORD=$MARIADB_ROOT_PASS" >> ./CTFd/docker-compose.yml;
 echo "      - MYSQL_USER=$MARIADB_USER" >> ./CTFd/docker-compose.yml;
