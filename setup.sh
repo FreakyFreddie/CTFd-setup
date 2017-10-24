@@ -7,7 +7,7 @@ then
 fi
 
 #----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
-SYSTEM_USER="";
+SYSTEM_USER="d3nn1s";
 SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
