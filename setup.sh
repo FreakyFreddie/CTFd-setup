@@ -8,6 +8,7 @@ fi
 
 #----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
 SYSTEM_USER="";
+SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #plugins to install
@@ -195,7 +196,7 @@ fi
 
 #if bind directory does not exists, move bind directory there
 if [ ! -d /home/$SYSTEM_USER/bind ]; then
-    mv ./bind /home/$SYSTEM_USER/bind;
+    mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
 fi
 
 #GO TO HOME DIRECTORY
@@ -313,9 +314,6 @@ docker-compose up;
 #ADD DNS RECORD
 
 echo "The platform can be reached on https://$CTF_IP:8000.";
-
-#reset hostname
-cat /dev/null > /etc/hostname
 
 #cleanup apt
 apt-get clean
