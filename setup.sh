@@ -220,8 +220,6 @@ echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> .
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
-echo "CMD [\"/usr/sbin/named -f\"]" >> ./bind/Dockerfile;
-
 echo "Done.";
 
 #-----------------------------------------------------------------------------------------------------------------------------------------#
