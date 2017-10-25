@@ -217,7 +217,7 @@ echo "ENV CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
 echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
-echo "COPY /home/$SYSTEM_USER/bind/entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
+echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
 echo "CMD [\"/usr/sbin/named -f\"]" >> ./bind/Dockerfile;
