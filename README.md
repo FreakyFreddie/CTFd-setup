@@ -1,5 +1,5 @@
 # CTFd setup
-<p>CTFd will be installed in your user's home directory. Make sure to configure this variable in the script.</p>
+<p>CTFd (https://github.com/CTFd/CTFd) will be installed over 3 containers: CTFd (app), db (database) and bind (DNS). Don't forget to configure the variables in the script.</p>
 <ol>
 	<li>Set up ESXi cluster with vCenter server</li>
 	<li>Set up clean Ubuntu 16.04 LTS VM with an interface in VLAN 5, another in VLAN 10 and another in VLAN 15</li>
