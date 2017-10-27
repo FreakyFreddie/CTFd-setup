@@ -37,9 +37,6 @@ HV_MANAGEMENT_GATEWAY="192.168.1.1";
 #USED TO CONFIGURE DNS CONTAINER
 CTF_DNS_IP="10.0.7.4";
 CTF_REVERSE_DNS=$(echo $CTF_DNS_IP | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}');
-CTF_DNS_API_PORT="29375";
-#GENERATE RANDOM API KEY OF 32 ALPHANUMERICAL CHARACTERS AND TAKE THE FIRST
-CTF_DNS_API_KEY="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)";
 #DNS RECORD
 CTF_DNS_ROOT="myctf.be";
 CTF_NAME="ctf";
@@ -174,6 +171,7 @@ apt-get install python-pip -y;
 pip install --upgrade pip;
 apt-get install docker -y;
 apt-get install docker-compose -y;
+apt-get install bind9 -y;
 
 echo "Done.";
 echo "Configuring Docker to start on boot...";
@@ -204,8 +202,15 @@ if [ ! -d /home/$SYSTEM_USER/bind ]; then
     mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
 fi
 
+cd /home/$SYSTEM_USER/bind;
+git clone CTF_DNS_API_REPOSITORY;
+
 #GO TO HOME DIRECTORY
 cd /home/$SYSTEM_USER;
+
+#generate TSIG for API
+dnssec-keygen -r /dev/urandom -a HMAC-MD5 -b 512 -n HOST $CTF_DNS_ROOT;
+CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
 
 touch ./bind/Dockerfile
 echo "FROM debian:latest" >> ./bind/Dockerfile;
@@ -214,11 +219,13 @@ echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
-echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
+echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9 && apt-get" >> ./bind/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
+echo "EXPOSE 53" >> ./CTFd/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
 echo "Done.";
 
@@ -234,6 +241,26 @@ then
 fi
 
 echo "Done.";
+echo "Regenerating CTFd Docker configuration to install bind-tools...";
+
+echo "FROM python:2.7-alpine" > ./CTFd/Dockerfile;
+echo "RUN apk update && \\" >> ./CTFd/Dockerfile;
+echo "    apk add python python-dev libffi-dev gcc make musl-dev py-pip mysql-client bind-tools" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
+echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
+echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
+echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "RUN pip install -r requirements.txt" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "EXPOSE 8000" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
+
+echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
 
 echo "version: '2'" > ./CTFd/docker-compose.yml;
@@ -245,7 +272,8 @@ echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"8000:8000\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
-echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_USER@db/ctfd" >> ./CTFd/docker-compose.yml;
+echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_ROOT_PASS@db/ctfd" >> ./CTFd/docker-compose.yml;
+echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
@@ -275,7 +303,8 @@ echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/tcp\"" >> ./CTFd/docker-compose.yml;
-echo "      - \"$CTF_DNS_API_PORT:$CTF_DNS_API_PORT\"" >> ./CTFd/docker-compose.yml;
+echo "    environment:" >> ./CTFd/docker-compose.yml;
+echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
 
@@ -318,11 +347,12 @@ then
 fi
 #-----------------------------------------------------------------------------------------------------------------------------------------#
 
-#SETUP NGINX REVERSE PROXY CONTAINER
-#SETUP DNS SERVER CONTAINER
-#ADD DNS RECORD
+# OPTIONAL: SETUP NGINX REVERSE PROXY CONTAINER (to be added)
 
 echo "The platform can be reached on https://$CTF_IP:8000.";
+
+#bind was only needed to generate TSIG
+apt-get remove bind9 -y;
 
 #cleanup apt
 apt-get clean
