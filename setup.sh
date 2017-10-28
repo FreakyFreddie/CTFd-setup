@@ -241,18 +241,23 @@ then
 fi
 
 echo "Done.";
-echo "Regenerating CTFd Docker configuration to install bind-tools...";
+echo "Regenerating CTFd Docker configuration to use the latest Debian Python image with Python 3 and install dnsutils (nsupdate)...";
 
-echo "FROM python:2.7-alpine" > ./CTFd/Dockerfile;
-echo "RUN apk update && \\" >> ./CTFd/Dockerfile;
-echo "    apk add python python-dev libffi-dev gcc make musl-dev py-pip mysql-client bind-tools" >> ./CTFd/Dockerfile;
+#Python image used for container
+echo "FROM python:3" > ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "RUN apt-get update && apt-get upgrade -y" >> ./CTFd/Dockerfile;
+echo "RUN apt-get install python3 python3-dev mysql-client libffi-dev gcc make musl-dev python3-pip dnsutils -y" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
-echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
-echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
-echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "RUN pip install -r requirements.txt" >> ./CTFd/Dockerfile;
+echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
+echo "VOLUME ["/opt/CTFd"]
+echo "" >> ./CTFd/Dockerfile;
+echo "RUN pip3 install -r requirements.txt
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
