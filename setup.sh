@@ -255,9 +255,9 @@ echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "VOLUME ["/opt/CTFd"]
+echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "RUN pip3 install -r requirements.txt
+echo "RUN pip3 install -r requirements.txt" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
