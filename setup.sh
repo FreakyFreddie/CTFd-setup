@@ -1,19 +1,23 @@
 #!/bin/bash
-#Use this script to easily set up the CTF Platform on Ubuntu 16.04 LTS
+#Use this script to easily set up the CTFd Platform on Ubuntu 16.04 LTS
+#The script will do the following:
+#-Set up the CTFd app and database container
+#-install vSphere automation SDK requirements in CTFd app container
+#-install bind DNS in a separate container
 if [ $EUID -ne 0 ]
 then
 	echo "RUN THE SCRIPT AS ROOT.";
 	exit 1;
 fi
 
-#----------------------------------------------------------PARAMETER DECLARATION----------------------------------------------------------#
+#--------------------------------------PARAMETER DECLARATION--------------------------------------#
 SYSTEM_USER="d3nn1s";
 SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #plugins to install
 PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
-#PLUGINS[1]="https://github.com/FreakyFreddie/CTFd-challenge-VMs-plugin"
+PLUGINS[1]="https://github.com/FreakyFreddie/challengevms";
 
 #CTF NETWORK SETTINGS (users connect to this interface, VLAN 15)
 CTF_IFACE="ens160";
@@ -55,8 +59,8 @@ path = /home/$SYSTEM_USER/$CTF_NAME
 valid users = $SAMBA_USER
 read only = no";
 
-#-----------------------------------------------------------------------------------------------------------------------------------------#
-#----------------------------------------------------------NETWORK CONFIGURATION----------------------------------------------------------#
+#-------------------------------------------------------------------------------------------------#
+#--------------------------------------NETWORK CONFIGURATION--------------------------------------#
 echo "Removing automaticly configured interfaces to CTF Platform networks...";
 
 #ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
@@ -142,9 +146,8 @@ then
 fi
 
 echo "Internet access detected.";
-#-----------------------------------------------------------------------------------------------------------------------------------------#
-#--------------------------------------------------------------PRE INSTALLATION-----------------------------------------------------------#
-
+#--------------------------------------------------------------------------------------------------------#
+#---------------------------------------------PRE INSTALLATION-------------------------------------------#
 echo "Updating package list & upgrading packages...";
 
 #UPDATES
@@ -185,15 +188,15 @@ fi
 
 echo "Done.";
 
-#-----------------------------------------------------------------------------------------------------------------------------------------#
-#--------------------------------------------------------DNS CONTAINER CONFIGURATION------------------------------------------------------#
+#----------------------------------------------------------------------------------------------#
+#-----------------------------------DNS CONTAINER CONFIGURATION--------------------------------#
 # Generate Docker file with environment variables set
 
 echo "Generating Docker configuration for DNS container...";
 
 #if system user's directory does not exists, exit
 if [ ! -d /home/$SYSTEM_USER ]; then
-	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again."
+	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again.";
    	exit 1;
 fi
 
@@ -229,9 +232,8 @@ echo "EXPOSE 53" >> ./CTFd/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
 echo "Done.";
 
-#-----------------------------------------------------------------------------------------------------------------------------------------#
-#------------------------------------------------------------CTF CONFIGURATION------------------------------------------------------------#
-
+#-----------------------------------------------------------------------------------------------------#
+#------------------------------------------CTF CONFIGURATION------------------------------------------#
 echo "Cloning CTFd into home directory...";
 
 if ! git clone ${CTFd_REPOSITORY}
@@ -239,6 +241,17 @@ then
 	echo "git clone ${CTFd_REPOSITORY} failed. Exiting...";
     exit 1;
 fi
+
+echo "Done.";
+echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
+
+if ! git -C /home/$SYSTEM_USER clone https://github.com/vmware/vsphere-automation-sdk-python
+then
+	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
+    exit 1;
+fi
+
+echo $(cat ./vsphere-automation-sdk-python/requirements.txt) >> ./CTFd/requirements.txt;
 
 echo "Done.";
 echo "Regenerating CTFd Docker configuration to use the latest Debian Python image with Python 3 and install dnsutils (nsupdate)...";
@@ -253,11 +266,13 @@ echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
+echo "COPY /home/$SYSTEM_USER/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
+echo "" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "RUN pip3 install -r requirements.txt" >> ./CTFd/Dockerfile;
+echo "RUN pip3 install -r requirements.txt --extra-index-url /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile; #also install vsphere API dependencies
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
@@ -350,7 +365,7 @@ then
     echo "Unable to launch containers. Exiting...";
     exit 1;
 fi
-#-----------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------------------------------------#
 
 # OPTIONAL: SETUP NGINX REVERSE PROXY CONTAINER (to be added)
 
