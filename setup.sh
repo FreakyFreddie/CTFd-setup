@@ -19,6 +19,9 @@ CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
 PLUGINS[1]="https://github.com/FreakyFreddie/challengevms";
 
+#themes to install
+THEMES[0]="https://github.com/ColdHeat/UnitedStates"
+
 #CTF NETWORK SETTINGS (users connect to this interface, VLAN 15)
 CTF_IFACE="ens160";
 CTF_IP="10.0.7.4";
@@ -281,6 +284,12 @@ echo "" >> ./CTFd/Dockerfile;
 echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
 
 echo "Done.";
+echo "Adding self-signed certificate to parameters of gunicorn launch...";
+
+APPEND=" --keyfile '/opt/CTFd/key.pem' --certfile '/opt.CTFd/cert.pem'";
+echo "$(cat docker-entrypoint.sh)$APPEND" > docker-entrypoint.sh;
+
+echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
 
 echo "version: '2'" > ./CTFd/docker-compose.yml;
@@ -329,12 +338,35 @@ echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
 
 echo "Added bind service (3/3).";
+echo "Generating self-signed certificate...";
+
+cd CTFd;
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365;
+openssl rsa -in key.pem -out key.pem;
+echo "Done.";
+
 echo "Cloning plugins...";
 
-cd ./CTFd/CTFd/plugins;
+cd ./CTFd/plugins;
 
-#still needs work (copy directly into plugin folder)
+#clone plugins to plugin folder
 for i in "${PLUGINS[@]}"
+do
+   	if ! git clone $i
+	then
+		echo "git clone $i failed. Exiting..."
+	    exit 1;
+	fi
+   	echo "Cloned $i.";
+done
+
+echo "Done.";
+echo "Cloning themes...";
+
+cd ../themes;
+
+#clone themes to theme folder
+for i in "${THEMES[@]}"
 do
    	if ! git clone $i
 	then
