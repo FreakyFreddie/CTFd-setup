@@ -27,7 +27,8 @@ CTF_IFACE="ens160";
 CTF_IP="10.0.7.4";
 CTF_SUBNET="255.255.252.0";
 CTF_GATEWAY="10.0.4.1";
-CTF_DNS="10.0.7.4";
+CTF_NETWORK="10.0.4.0";
+CTF_DNS="10.0.4.1";
 
 #VM MANAGEMENT NETWORK SETTINGS (used to manage the VM through SSH, VLAN 10)
 VM_MANAGEMENT_IFACE="ens192";
@@ -49,9 +50,12 @@ CTF_DNS_ROOT="myctf.be";
 CTF_NAME="ctf";
 
 #MARIADB CONTAINER CONFIG
-MARIADB_ROOT_PASS="CTFd"
-MARIADB_USER="CTFd"
-MARIADB_PASS="CTFd"
+MARIADB_ROOT_PASS="CTFd";
+MARIADB_USER="CTFd";
+MARIADB_PASS="CTFd";
+
+#redis URL
+CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
 
 #configuration for samba share (optional/easy way to access logs)
 SAMBA_USER=""
@@ -89,6 +93,7 @@ echo "auto $CTF_IFACE" >> /etc/network/interfaces;
 echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
 echo "address $CTF_IP" >> /etc/network/interfaces;
 echo "netmask $CTF_SUBNET" >> /etc/network/interfaces;
+echo "network $CTF_NETWORK" >> /etc/network/interfaces;
 echo "gateway $CTF_GATEWAY" >> /etc/network/interfaces;
 echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
 echo "" >> /etc/network/interfaces;
@@ -173,11 +178,12 @@ echo "Installing CTFd dependencies...";
 
 #INSTALL DEPENDENCIES
 apt-get install git -y;
-apt-get install python-pip -y;
-pip install --upgrade pip;
+#apt-get install python-pip -y;
+#pip install --upgrade pip;
 apt-get install docker -y;
 apt-get install docker-compose -y;
 apt-get install bind9 -y;
+apt-get install mariadb-client-10.0 -y;
 
 echo "Done.";
 echo "Configuring Docker to start on boot...";
@@ -208,9 +214,6 @@ if [ ! -d /home/$SYSTEM_USER/bind ]; then
     mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
 fi
 
-cd /home/$SYSTEM_USER/bind;
-git clone CTF_DNS_API_REPOSITORY;
-
 #GO TO HOME DIRECTORY
 cd /home/$SYSTEM_USER;
 
@@ -223,16 +226,59 @@ echo "FROM debian:latest" >> ./bind/Dockerfile;
 echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
-echo "ENV CTF_DNS_API_PORT=$CTF_DNS_API_PORT" >> ./bind/Dockerfile;
-echo "ENV CTF_DNS_API_KEY=$CTF_DNS_API_KEY" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
 echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9 && apt-get" >> ./bind/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
-echo "EXPOSE 53" >> ./CTFd/Dockerfile;
+echo "EXPOSE 53" >> ./bind/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
+echo "Done.";
+
+#-----------------------------------------------------------------------------------------------------#
+#--------------------------------------NGINX CONTAINER CONFIGURATION----------------------------------#
+# Generate Docker file with environment variables set
+
+echo "Generating Docker configuration for NGINX container...";
+
+#if nginx directory does not exists, move nginx directory there
+if [ ! -d /home/$SYSTEM_USER/nginx ]; then
+    mv $SCRIPT_DIRECTORY/nginx /home/$SYSTEM_USER/nginx;
+fi
+
+#GENERATE CERTIFICATE
+
+touch ./nginx/Dockerfile
+echo "FROM nginx:latest" >> ./nginx/Dockerfile;
+echo "ENV CTF_IP=$CTF_IP" >> ./nginx/Dockerfile;
+echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./nginx/Dockerfile;
+echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./nginx/Dockerfile;
+echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./nginx/Dockerfile;
+echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./nginx/Dockerfile;
+echo "ENV CTF_NAME=$CTF_NAME" >> ./nginx/Dockerfile;
+echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9 && apt-get" >> ./nginx/Dockerfile;
+echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./nginx/Dockerfile;
+echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./nginx/Dockerfile;
+echo "EXPOSE 443" >> ./nginx/Dockerfile;
+echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./nginx/Dockerfile;
+echo "Done.";
+
+#-----------------------------------------------------------------------------------------------------#
+#--------------------------------------REDIS CONTAINER CONFIGURATION----------------------------------#
+# Generate Docker file with environment variables set
+
+echo "Generating Docker configuration for NGINX container...";
+
+#if redis directory does not exists, move redis directory there
+if [ ! -d /home/$SYSTEM_USER/redis ]; then
+    mv $SCRIPT_DIRECTORY/redis /home/$SYSTEM_USER/redis;
+fi
+
+touch ./redis/Dockerfile
+echo "FROM redis:latest" >> ./redis/Dockerfile;
+echo "COPY redis.conf /usr/local/etc/redis/redis.conf" >> ./redis/Dockerfile;
+echo "CMD [ \"redis-server\", \"/usr/local/etc/redis/redis.conf\" ]" >> ./redis/Dockerfile;
 echo "Done.";
 
 #-----------------------------------------------------------------------------------------------------#
@@ -246,15 +292,17 @@ then
 fi
 
 echo "Done.";
-echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
+#echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
 
-if ! git -C /home/$SYSTEM_USER clone https://github.com/vmware/vsphere-automation-sdk-python
-then
-	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
-    exit 1;
-fi
+#if ! git -C /home/$SYSTEM_USER clone https://github.com/vmware/vsphere-automation-sdk-python
+#then
+#	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
+#    exit 1;
+#fi
 
-echo $(cat ./vsphere-automation-sdk-python/requirements.txt) >> ./CTFd/requirements.txt;
+#echo $(cat ./vsphere-automation-sdk-python/requirements.txt) >> ./CTFd/requirements.txt;
+
+#ADD VSPHERE API REQUIREMENTS TO FILE
 
 echo "Done.";
 echo "Regenerating CTFd Docker configuration to use the latest Debian Python image with Python 3 and install dnsutils (nsupdate)...";
@@ -268,14 +316,14 @@ echo "" >> ./CTFd/Dockerfile;
 echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
-echo "" >> ./CTFd/Dockerfile;
-echo "COPY /home/$SYSTEM_USER/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
+#echo "" >> ./CTFd/Dockerfile;
+#echo "COPY /home/$SYSTEM_USER/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "RUN pip3 install -r requirements.txt --extra-index-url /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile; #also install vsphere API dependencies
+echo "RUN pip3 install -r requirements.txt" >> ./CTFd/Dockerfile; #also install vsphere API dependencies# --extra-index-url /opt/vsphere-automation-sdk-python/lib"
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
@@ -286,7 +334,7 @@ echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
 echo "Done.";
 echo "Adding self-signed certificate to parameters of gunicorn launch...";
 
-APPEND=" --keyfile '/opt/CTFd/key.pem' --certfile '/opt.CTFd/cert.pem'";
+APPEND=" --keyfile '/opt/CTFd/key.pem' --certfile '/opt/CTFd/cert.pem'";
 echo "$(cat docker-entrypoint.sh)$APPEND" > docker-entrypoint.sh;
 
 echo "Done.";
@@ -298,11 +346,12 @@ echo "services:" >> ./CTFd/docker-compose.yml;
 echo "  ctfd:" >> ./CTFd/docker-compose.yml;
 echo "    build: ." >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
-echo "    ports:" >> ./CTFd/docker-compose.yml;
-echo "      - \"8000:8000\"" >> ./CTFd/docker-compose.yml;
+echo "    expose:" >> ./CTFd/docker-compose.yml;
+echo "      - \"8000\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_ROOT_PASS@db/ctfd" >> ./CTFd/docker-compose.yml;
 echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
+echo "      - CACHE_REDIS_URL=$CACHE_REDIS_URL" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
@@ -311,10 +360,10 @@ echo "      - db" >> ./CTFd/docker-compose.yml;
 echo "      - bind" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added CTFd service (1/3).";
+echo "Added CTFd service (1/5).";
 
 echo "  db:" >> ./CTFd/docker-compose.yml;
-echo "    image: mariadb:10.2" >> ./CTFd/docker-compose.yml;
+echo "    image: mariadb:latest" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - MYSQL_ROOT_PASSWORD=$MARIADB_ROOT_PASS" >> ./CTFd/docker-compose.yml;
@@ -324,7 +373,7 @@ echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/mysql:/var/lib/mysql" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added db service (2/3).";
+echo "Added db service (2/5).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
 echo "    build: /home/$SYSTEM_USER/bind/" >> ./CTFd/docker-compose.yml;
@@ -337,12 +386,44 @@ echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
 
-echo "Added bind service (3/3).";
+echo "Added bind service (3/5).";
+
+echo "  nginx:" >> ./CTFd/docker-compose.yml;
+echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
+echo "    restart: always" >> ./CTFd/docker-compose.yml;
+echo "    ports:" >> ./CTFd/docker-compose.yml;
+echo "      - \"443:443\"" >> ./CTFd/docker-compose.yml;
+echo "    environment:" >> ./CTFd/docker-compose.yml;
+echo "      - NGINX_HOST='10.0.7.4'" >> ./CTFd/docker-compose.yml;
+echo "      - APP_CONTAINER_ADDRESS='ctfd'" >> ./CTFd/docker-compose.yml;
+echo "      - NGINX_PORT='443'" >> ./CTFd/docker-compose.yml;
+echo "    volumes:" >> ./CTFd/docker-compose.yml;
+echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
+echo "      - ../nginx/reverse-proxy.template:/etc/nginx/conf.d/reverse-proxy.template" >> ./CTFd/docker-compose.yml;
+echo "    command: /bin/bash -c \"envsubst < /etc/nginx/conf.d/reverse-proxy.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'\"" >> ./CTFd/docker-compose.yml;
+
+echo "Added NGINX service as reverse proxy (4/5).";
+
+echo "  redis:" >> ./CTFd/docker-compose.yml;
+echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
+echo "    restart: always" >> ./CTFd/docker-compose.yml;
+echo "    expose:" >> ./CTFd/docker-compose.yml;
+echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
+echo "    volumes:" >> ./CTFd/docker-compose.yml;
+echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
+echo "      - ../redis/redis.conf:/usr/local/etc/redis/redis.conf" >> ./CTFd/docker-compose.yml;
+echo "    command: /bin/bash -c \"envsubst < /etc/nginx/conf.d/reverse-proxy.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'\"" >> ./CTFd/docker-compose.yml;
+
+echo "Added redis service (5/5).";
+#redis cache container to be added /myredis/conf/redis.conf:/usr/local/etc/redis/redis.conf
+
 echo "Generating self-signed certificate...";
 
 cd CTFd;
-openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365;
-openssl rsa -in key.pem -out key.pem;
+openssl req -x509 -newkey rsa:4096 -passout pass:notreallyneeded -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
+# Remove the pass phrase on RSA private key:
+openssl rsa -passin pass:notreallyneeded -in key.pem -out key.pem;
+
 echo "Done.";
 
 echo "Cloning plugins...";
@@ -401,7 +482,7 @@ fi
 
 # OPTIONAL: SETUP NGINX REVERSE PROXY CONTAINER (to be added)
 
-echo "The platform can be reached on https://$CTF_IP:8000.";
+echo "The platform can be reached on https://$CTF_IP.";
 
 #bind was only needed to generate TSIG
 apt-get remove bind9 -y;
