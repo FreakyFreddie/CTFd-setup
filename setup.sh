@@ -98,7 +98,7 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if [ ! ifup $CTF_IFACE ]
+	if ! ifup $CTF_IFACE
 	then
 	    echo "Unable to bring up $CTF_IFACE. Exiting...";
 	    exit 1;
@@ -106,7 +106,7 @@ then
 	echo "Done.";
 fi
 
-if [ "$VM_MANAGEMENT_IFACE_IP" != $VM_MANAGEMENT_IP ]
+if [ "$VM_MANAGEMENT_IFACE_IP" != "$VM_MANAGEMENT_IP" ]
 then
 	sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 	ifdown $VM_MANAGEMENT_IFACE;
@@ -121,7 +121,7 @@ then
 	echo "VM management network configured. (2/3)";
 	echo "Starting VM management interface...";
 
-	if [ ! ifup $VM_MANAGEMENT_IFACE ]
+	if ! ifup $VM_MANAGEMENT_IFACE
 	then
 	    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
 	    exit 1;
@@ -145,7 +145,7 @@ then
 	echo "Hypervisor management network configured. (3/3)";
 	echo "Starting Hypervisor management interface...";
 
-	if [ ! ifup $HV_MANAGEMENT_IFACE ]
+	if ! ifup $HV_MANAGEMENT_IFACE
 	then
 	    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
 	    exit 1;
@@ -157,7 +157,7 @@ fi
 echo "Testing network connection...";
 
 #If machine has internet, continue
-if [ ! ping -c 4 8.8.8.8 ]
+if ! ping -c 4 8.8.8.8
 then
     echo "No internet access. Exiting...";
     exit 1;
@@ -171,7 +171,7 @@ echo "Updating package list & upgrading packages...";
 #UPDATES
 apt-get update;
 
-if [ ! apt-get upgrade -y ]
+if ! apt-get upgrade -y
 then
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
@@ -199,7 +199,7 @@ echo "Done.";
 echo "Configuring Docker to start on boot...";
 
 # Configure Docker daemon to start on boot
-if [ ! systemctl enable docker ]
+if ! systemctl enable docker
 then
     echo "Unable to configure Docker to start on boot. Exiting...";
     exit 1;
@@ -214,13 +214,15 @@ echo "Done.";
 echo "Generating Docker configuration for DNS container...";
 
 #if system user's directory does not exists, exit
-if [ ! -d /home/$SYSTEM_USER ]; then
+if [ ! -d /home/$SYSTEM_USER ]
+then
 	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again.";
    	exit 1;
 fi
 
 #if bind directory does not exists, move bind directory there
-if [ ! -d /home/$SYSTEM_USER/bind ]; then
+if [ ! -d /home/$SYSTEM_USER/bind ]
+then
     mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
 fi
 
@@ -253,7 +255,8 @@ echo "Done.";
 echo "Generating Docker configuration for NGINX container...";
 
 #if nginx directory does not exists, move nginx directory there
-if [ ! -d /home/$SYSTEM_USER/nginx ]; then
+if [ ! -d /home/$SYSTEM_USER/nginx ]
+then
     mv $SCRIPT_DIRECTORY/nginx /home/$SYSTEM_USER/nginx;
 fi
 
