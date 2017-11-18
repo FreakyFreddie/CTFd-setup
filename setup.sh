@@ -254,6 +254,8 @@ echo "Done.";
 
 echo "Generating Docker configuration for NGINX container...";
 
+mkdir -p ./nginx
+
 #if nginx directory does not exists, move nginx directory there
 if [ ! -d /home/$SYSTEM_USER/nginx ]
 then
@@ -275,6 +277,7 @@ echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./nginx/Dockerfile;
 echo "Done.";
 
 #GENERATE NGINX CONFIG TEMPLATE
+
 touch ./nginx/reverse-proxy.template
 echo "worker_processes 4;" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
@@ -516,7 +519,7 @@ echo "Added NGINX service as reverse proxy (4/4).";
 echo "Generating self-signed certificate for connection between ...";
 
 cd CTFd;
-openssl req -x509 -newkey rsa:4096  -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
+openssl req -x509 -nodes -newkey rsa:4096  -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
 
 echo "Done.";
 
