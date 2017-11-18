@@ -183,7 +183,7 @@ apt-get install git -y;
 apt-get install docker -y;
 apt-get install docker-compose -y;
 apt-get install bind9 -y;
-apt-get install mariadb-client-10.0 -y;
+apt-get install mariadb-client -y;
 
 echo "Done.";
 echo "Configuring Docker to start on boot...";
@@ -229,7 +229,7 @@ echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
 echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
-echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9 && apt-get" >> ./bind/Dockerfile;
+echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "EXPOSE 53" >> ./bind/Dockerfile;
@@ -248,38 +248,123 @@ if [ ! -d /home/$SYSTEM_USER/nginx ]; then
 fi
 
 #GENERATE CERTIFICATE
+openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout ./nginx/cert.key -out ./nginx/cert.crt -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
 
 touch ./nginx/Dockerfile
 echo "FROM nginx:latest" >> ./nginx/Dockerfile;
-echo "ENV CTF_IP=$CTF_IP" >> ./nginx/Dockerfile;
-echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./nginx/Dockerfile;
-echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./nginx/Dockerfile;
-echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./nginx/Dockerfile;
-echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./nginx/Dockerfile;
-echo "ENV CTF_NAME=$CTF_NAME" >> ./nginx/Dockerfile;
-echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9 && apt-get" >> ./nginx/Dockerfile;
+echo "RUN mkdir -p /var/log/nginx" >> ./nginx/Dockerfile;
+echo "RUN mkdir -p /var/ctfd" >> ./nginx/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./nginx/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./nginx/Dockerfile;
+echo "EXPOSE 80" >> ./nginx/Dockerfile;
 echo "EXPOSE 443" >> ./nginx/Dockerfile;
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./nginx/Dockerfile;
 echo "Done.";
+
+#GENERATE NGINX CONFIG TEMPLATE
+touch ./nginx/reverse-proxy.template
+echo "worker_processes 4;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "user nobody nogroup;" >> ./nginx/reverse-proxy.template;
+echo "# 'user nobody nobody;' for systems with 'nobody' as a group instead" >> ./nginx/reverse-proxy.template;
+echo "pid /tmp/nginx.pid;" >> ./nginx/reverse-proxy.template;
+echo "error_log /tmp/nginx.error.log;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "events {" >> ./nginx/reverse-proxy.template;
+echo "  worker_connections 1024; # increase if you have lots of clients" >> ./nginx/reverse-proxy.template;
+echo "  accept_mutex on; # set to 'on' if nginx worker_processes > 1" >> ./nginx/reverse-proxy.template;
+echo "  use epoll; # to enable for Linux 2.6+" >> ./nginx/reverse-proxy.template;
+echo "  # 'use kqueue;' to enable for FreeBSD, OSX" >> ./nginx/reverse-proxy.template;
+echo "}" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "http {" >> ./nginx/reverse-proxy.template;
+echo "  include mime.types;" >> ./nginx/reverse-proxy.template;
+echo "  # fallback in case we can't determine a type" >> ./nginx/reverse-proxy.template;
+echo "  default_type application/octet-stream;" >> ./nginx/reverse-proxy.template;
+echo "  access_log /var/log/nginx/access.log combined;" >> ./nginx/reverse-proxy.template;
+echo "  sendfile on;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "  upstream app_server {" >> ./nginx/reverse-proxy.template;
+echo "    # fail_timeout=0 means we always retry an upstream even if it failed" >> ./nginx/reverse-proxy.template;
+echo "    # to return a good HTTP response" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    # for UNIX domain socket setups" >> ./nginx/reverse-proxy.template;
+echo "    # server unix:/tmp/gunicorn.sock fail_timeout=0;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    # for a TCP configuration" >> ./nginx/reverse-proxy.template;
+echo "    server ctfd:443 fail_timeout=0;" >> ./nginx/reverse-proxy.template;
+echo "  }" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "  server {" >> ./nginx/reverse-proxy.template;
+echo "    # if no Host match, close the connection to prevent host spoofing" >> ./nginx/reverse-proxy.template;
+echo "    listen 80 default_server;" >> ./nginx/reverse-proxy.template;
+echo "    return 301 https://$host$request_uri;" >> ./nginx/reverse-proxy.template;
+echo "    #rewrite ^/(.*) https://$host/$1 permanent;" >> ./nginx/reverse-proxy.template;
+echo "  }" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "  server {" >> ./nginx/reverse-proxy.template;
+echo "    # use 'listen 80 deferred;' for Linux" >> ./nginx/reverse-proxy.template;
+echo "    # use 'listen 80 accept_filter=httpready;' for FreeBSD" >> ./nginx/reverse-proxy.template;
+echo "    listen 443 ssl;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_certificate /etc/nginx/cert.crt;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_certificate_key /etc/nginx/cert.key;" >> ./nginx/reverse-proxy.template;
+echo "    ssl on;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_session_cache  builtin:1000  shared:SSL:10m;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;" >> ./nginx/reverse-proxy.template;
+echo "    ssl_prefer_server_ciphers on;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    client_max_body_size 4G;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    # set the correct host(s) for your site" >> ./nginx/reverse-proxy.template;
+echo "    # server_name example.com www.example.com;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    keepalive_timeout 5;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    # path for static files" >> ./nginx/reverse-proxy.template;
+echo "    root /var/ctfd;" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    location / {" >> ./nginx/reverse-proxy.template;
+echo "      # checks for static file, if not found proxy to app" >> ./nginx/reverse-proxy.template;
+echo "      try_files $uri @proxy_to_app;" >> ./nginx/reverse-proxy.template;
+echo "    }" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo '    location @proxy_to_app {' >> ./nginx/reverse-proxy.template;
+echo '      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> ./nginx/reverse-proxy.template;
+echo "      # enable this if and only if you use HTTPS" >> ./nginx/reverse-proxy.template;
+echo "      proxy_set_header X-Forwarded-Proto https;" >> ./nginx/reverse-proxy.template;
+echo "      proxy_set_header Host $http_host;" >> ./nginx/reverse-proxy.template;
+echo "      # we don't want nginx trying to do something clever with" >> ./nginx/reverse-proxy.template;
+echo "      # redirects, we set the Host: header above already." >> ./nginx/reverse-proxy.template;
+echo "      proxy_redirect off;" >> ./nginx/reverse-proxy.template;
+echo "      proxy_pass https://ctfd;" >> ./nginx/reverse-proxy.template;
+echo "    }" >> ./nginx/reverse-proxy.template;
+echo "" >> ./nginx/reverse-proxy.template;
+echo "    #error_page 500 502 503 504 /500.html;" >> ./nginx/reverse-proxy.template;
+echo "    # location = /500.html {" >> ./nginx/reverse-proxy.template;
+echo "      # root /path/to/app/current/public;" >> ./nginx/reverse-proxy.template;
+echo "    #}" >> ./nginx/reverse-proxy.template;
+echo "  }" >> ./nginx/reverse-proxy.template;
+echo "}" >> ./nginx/reverse-proxy.template;
+
 
 #-----------------------------------------------------------------------------------------------------#
 #--------------------------------------REDIS CONTAINER CONFIGURATION----------------------------------#
 # Generate Docker file with environment variables set
 
-echo "Generating Docker configuration for NGINX container...";
+#echo "Generating Docker configuration for redis container...";
 
 #if redis directory does not exists, move redis directory there
-if [ ! -d /home/$SYSTEM_USER/redis ]; then
-    mv $SCRIPT_DIRECTORY/redis /home/$SYSTEM_USER/redis;
-fi
+#if [ ! -d /home/$SYSTEM_USER/redis ]; then
+#    mv $SCRIPT_DIRECTORY/redis /home/$SYSTEM_USER/redis;
+#fi
 
-touch ./redis/Dockerfile
-echo "FROM redis:latest" >> ./redis/Dockerfile;
-echo "COPY redis.conf /usr/local/etc/redis/redis.conf" >> ./redis/Dockerfile;
-echo "CMD [ \"redis-server\", \"/usr/local/etc/redis/redis.conf\" ]" >> ./redis/Dockerfile;
-echo "Done.";
+#generate redis config
+
+#touch ./redis/Dockerfile
+#echo "FROM redis:latest" >> ./redis/Dockerfile;
+#echo "CMD [ \"redis-server\", \"/usr/local/etc/redis/redis.conf\" ]" >> ./redis/Dockerfile;
+#echo "Done.";
 
 #-----------------------------------------------------------------------------------------------------#
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
@@ -327,15 +412,15 @@ echo "RUN pip3 install -r requirements.txt" >> ./CTFd/Dockerfile; #also install 
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "EXPOSE 8000" >> ./CTFd/Dockerfile;
+echo "EXPOSE 443" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
 
 echo "Done.";
-echo "Adding self-signed certificate to parameters of gunicorn launch...";
+echo "Adding new parameters to gunicorn launch...";
 
-APPEND=" --keyfile '/opt/CTFd/key.pem' --certfile '/opt/CTFd/cert.pem'";
-echo "$(cat docker-entrypoint.sh)$APPEND" > docker-entrypoint.sh;
+sed -i '/gunicorn/d' ./infile
+echo "gunicorn --bind 0.0.0.0:443 -w 4 'CTFd:create_app()' --access-logfile '/opt/CTFd/CTFd/logs/access.log' --error-logfile '/opt/CTFd/CTFd/logs/error.log' --keyfile '/opt/CTFd/key.pem' --certfile '/opt/CTFd/cert.pem' --log-level debug" >> ./CTFd/docker-entrypoint.sh;
 
 echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
@@ -346,8 +431,6 @@ echo "services:" >> ./CTFd/docker-compose.yml;
 echo "  ctfd:" >> ./CTFd/docker-compose.yml;
 echo "    build: ." >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
-echo "    expose:" >> ./CTFd/docker-compose.yml;
-echo "      - \"8000\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_ROOT_PASS@db/ctfd" >> ./CTFd/docker-compose.yml;
 echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
@@ -357,10 +440,10 @@ echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
 echo "    depends_on:" >> ./CTFd/docker-compose.yml;
 echo "      - db" >> ./CTFd/docker-compose.yml;
-echo "      - bind" >> ./CTFd/docker-compose.yml;
+echo "      - nginx" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added CTFd service (1/5).";
+echo "Added CTFd service (1/4).";
 
 echo "  db:" >> ./CTFd/docker-compose.yml;
 echo "    image: mariadb:latest" >> ./CTFd/docker-compose.yml;
@@ -373,7 +456,7 @@ echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/mysql:/var/lib/mysql" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added db service (2/5).";
+echo "Added db service (2/4).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
 echo "    build: /home/$SYSTEM_USER/bind/" >> ./CTFd/docker-compose.yml;
@@ -385,13 +468,15 @@ echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
+echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added bind service (3/5).";
+echo "Added bind service (3/4).";
 
 echo "  nginx:" >> ./CTFd/docker-compose.yml;
 echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
+echo "      - \"80:80\"" >> ./CTFd/docker-compose.yml;
 echo "      - \"443:443\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - NGINX_HOST='10.0.7.4'" >> ./CTFd/docker-compose.yml;
@@ -400,29 +485,25 @@ echo "      - NGINX_PORT='443'" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/reverse-proxy.template:/etc/nginx/conf.d/reverse-proxy.template" >> ./CTFd/docker-compose.yml;
-echo "    command: /bin/bash -c \"envsubst < /etc/nginx/conf.d/reverse-proxy.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'\"" >> ./CTFd/docker-compose.yml;
+echo "      - ../nginx/cert.crt:/etc/nginx/cert.crt" >> ./CTFd/docker-compose.yml;
+echo "      - ../nginx/cert.key:/etc/nginx/cert.key" >> ./CTFd/docker-compose.yml;
+echo "" >> ./CTFd/docker-compose.yml;
 
-echo "Added NGINX service as reverse proxy (4/5).";
+echo "Added NGINX service as reverse proxy (4/4).";
 
-echo "  redis:" >> ./CTFd/docker-compose.yml;
-echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
-echo "    restart: always" >> ./CTFd/docker-compose.yml;
-echo "    expose:" >> ./CTFd/docker-compose.yml;
-echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
-echo "    volumes:" >> ./CTFd/docker-compose.yml;
-echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
-echo "      - ../redis/redis.conf:/usr/local/etc/redis/redis.conf" >> ./CTFd/docker-compose.yml;
-echo "    command: /bin/bash -c \"envsubst < /etc/nginx/conf.d/reverse-proxy.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'\"" >> ./CTFd/docker-compose.yml;
+#echo "  redis:" >> ./CTFd/docker-compose.yml;
+#echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
+#echo "    restart: always" >> ./CTFd/docker-compose.yml;
+#echo "    expose:" >> ./CTFd/docker-compose.yml;
+#echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
+#echo "    volumes:" >> ./CTFd/docker-compose.yml;
+#echo "      - ../redis/redis.conf:/usr/local/etc/redis/redis.conf" >> ./CTFd/docker-compose.yml;
 
-echo "Added redis service (5/5).";
-#redis cache container to be added /myredis/conf/redis.conf:/usr/local/etc/redis/redis.conf
-
-echo "Generating self-signed certificate...";
+#echo "Added redis service (5/5).";
+echo "Generating self-signed certificate for connection between ...";
 
 cd CTFd;
-openssl req -x509 -newkey rsa:4096 -passout pass:notreallyneeded -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
-# Remove the pass phrase on RSA private key:
-openssl rsa -passin pass:notreallyneeded -in key.pem -out key.pem;
+openssl req -x509 -newkey rsa:4096  -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
 
 echo "Done.";
 
