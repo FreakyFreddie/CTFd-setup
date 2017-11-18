@@ -228,11 +228,23 @@ then
 fi
 
 #GO TO HOME DIRECTORY
-cd /home/$SYSTEM_USER;
+cd /home/$SYSTEM_USER/bind;
 
-#generate TSIG for API
+#generate TSIG for UPDATING RECORDS
+#COUNT=$(ls -1 *.key 2>/dev/null | wc -l)
+#if [ $COUNT != 0 ]
+#else
+	#remove old key
+	#rm ./*.key;
+#fi
 dnssec-keygen -r /dev/urandom -a HMAC-MD5 -b 512 -n HOST $CTF_DNS_ROOT;
 CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
+
+#keyfiles no longer needed as they will be written to containers
+rm ./*.private;
+rm ./*.key;
+
+cd /home/$SYSTEM_USER
 
 touch ./bind/Dockerfile
 echo "FROM debian:latest" >> ./bind/Dockerfile;
@@ -387,10 +399,13 @@ echo "}" >> ./nginx/reverse-proxy.template;
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
 echo "Cloning CTFd into home directory...";
 
-if ! git clone ${CTFd_REPOSITORY}
+if [ ! -d /home/$SYSTEM_USER/CTFd ]
 then
-	echo "git clone ${CTFd_REPOSITORY} failed. Exiting...";
-    exit 1;
+	if ! git clone ${CTFd_REPOSITORY}
+	then
+		echo "git clone ${CTFd_REPOSITORY} failed. Exiting...";
+	    exit 1;
+	fi
 fi
 
 echo "Done.";
