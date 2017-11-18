@@ -73,7 +73,11 @@ echo "Removing automaticly configured interfaces to CTF Platform networks...";
 echo "Done.";
 echo "Configuring CTF Platform network interfaces where necessary..."
 
-if [ $(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $CTF_IP ]
+$CTF_IFACE_IP=$(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+$VM_MANAGEMENT_IFACE_IP=$(ip addr show dev $VM_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+$HV_MANAGEMENT_IFACE_IP=$(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+
+if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
 then
 	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
 	sed -i "/$CTF_IFACE/d" /etc/network/interfaces;
@@ -102,7 +106,7 @@ then
 	echo "Done.";
 fi
 
-if [ $(ip addr show dev $VM_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $VM_MANAGEMENT_IP ]
+if [ "$VM_MANAGEMENT_IFACE_IP" != $VM_MANAGEMENT_IP ]
 then
 	sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 	ifdown $VM_MANAGEMENT_IFACE;
@@ -126,7 +130,7 @@ then
 	echo "Done.";
 fi
 
-if [ $(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $HV_MANAGEMENT_IP ]
+if [ "$HV_MANAGEMENT_IFACE_IP" != "$HV_MANAGEMENT_IP" ]
 then
 	sed -i "/$HV_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 	ifdown $HV_MANAGEMENT_IFACE;
