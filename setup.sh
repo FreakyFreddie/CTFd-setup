@@ -172,7 +172,7 @@ echo "Updating package list & upgrading packages...";
 #UPDATES
 apt-get -qq update;
 
-if ! apt-get -qq upgrade -y
+if ! apt-get upgrade -y -qq
 then
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
@@ -182,19 +182,19 @@ echo "Done.";
 
 #ADD SSH ACCESS (optional)
 echo "Adding SSH access...";
-apt-get install openssh-server -y;
+apt-get install openssh-server -y -qq;
 echo "Done.";
 
 echo "Installing CTFd dependencies...";
 
 #INSTALL DEPENDENCIES
-apt-get install git -y;
+apt-get install git -y -qq;
 #apt-get install python-pip -y;
 #pip install --upgrade pip;
-apt-get install docker -y;
-apt-get install docker-compose -y;
-apt-get install bind9 -y;
-apt-get install mariadb-client -y;
+apt-get install docker -y -qq;
+apt-get install docker-compose -y -qq;
+apt-get install bind9 -y -qq;
+apt-get install mariadb-client -y -qq;
 
 echo "Done.";
 echo "Configuring Docker to start on boot...";
