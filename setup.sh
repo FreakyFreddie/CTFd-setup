@@ -42,6 +42,11 @@ HV_MANAGEMENT_IP="192.168.1.254";
 HV_MANAGEMENT_SUBNET="255.255.255.0";
 HV_MANAGEMENT_GATEWAY="192.168.1.1";
 
+#CURRENT INTERFACE IPS
+CTF_IFACE_IP=$(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+VM_MANAGEMENT_IFACE_IP=$(ip addr show dev $VM_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+HV_MANAGEMENT_IFACE_IP=$(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
+
 #USED TO CONFIGURE DNS CONTAINER
 CTF_DNS_IP="10.0.7.4";
 CTF_REVERSE_DNS=$(echo $CTF_DNS_IP | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}');
@@ -72,10 +77,6 @@ echo "Removing automaticly configured interfaces to CTF Platform networks...";
 
 echo "Done.";
 echo "Configuring CTF Platform network interfaces where necessary..."
-
-$CTF_IFACE_IP=$(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
-$VM_MANAGEMENT_IFACE_IP=$(ip addr show dev $VM_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
-$HV_MANAGEMENT_IFACE_IP=$(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
 
 if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
 then
