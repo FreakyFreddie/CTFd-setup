@@ -170,9 +170,9 @@ echo "Internet access detected.";
 echo "Updating package list & upgrading packages...";
 
 #UPDATES
-apt-get -qq update;
+apt-get update > /dev/null;
 
-if ! apt-get upgrade -y -qq
+if ! apt-get upgrade -y > /dev/null
 then
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
@@ -182,19 +182,19 @@ echo "Done.";
 
 #ADD SSH ACCESS (optional)
 echo "Adding SSH access...";
-apt-get install openssh-server -y -qq;
+apt-get install openssh-server -y > /dev/null;
 echo "Done.";
 
 echo "Installing CTFd dependencies...";
 
 #INSTALL DEPENDENCIES
-apt-get install git -y -qq;
+apt-get install git -y > /dev/null;
 #apt-get install python-pip -y;
 #pip install --upgrade pip;
-apt-get install docker -y -qq;
-apt-get install docker-compose -y -qq;
-apt-get install bind9 -y -qq;
-apt-get install mariadb-client -y -qq;
+apt-get install docker -y > /dev/null;
+apt-get install docker-compose -y > /dev/null;
+apt-get install bind9 -y > /dev/null;
+apt-get install mariadb-client -y > /dev/null;
 
 echo "Done.";
 echo "Configuring Docker to start on boot...";
