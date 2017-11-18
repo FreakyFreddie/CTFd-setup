@@ -170,9 +170,9 @@ echo "Internet access detected.";
 echo "Updating package list & upgrading packages...";
 
 #UPDATES
-apt-get update;
+apt-get -qq update;
 
-if ! apt-get upgrade -y
+if ! apt-get -qq upgrade -y
 then
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
