@@ -586,7 +586,7 @@ cd ../..;
 #CHANGE DOCKER-COMPOSE PASSWORDS
 cd CTFd;
 
-if ! docker-compose -d up
+if ! docker-compose up
 then
     echo "Unable to launch containers. Exiting...";
     exit 1;
