@@ -70,84 +70,90 @@ read only = no";
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
 echo "Removing automaticly configured interfaces to CTF Platform networks...";
 
-#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
-sed -i "/$CTF_IFACE/d" /etc/network/interfaces;
-sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
-sed -i "/$HV_MANAGEMENT_IFACE/d" /etc/network/interfaces;
-
 echo "Done.";
-echo "Configuring CTF Platform network interfaces..."
+echo "Configuring CTF Platform network interfaces where necessary..."
 
-#Bring down interfaces
-ifdown $CTF_IFACE;
-ifdown $VM_MANAGEMENT_IFACE;
-ifdown $HV_MANAGEMENT_IFACE;
-
-#flush intefaces to prevent DHCP issues
-ip addr flush dev $CTF_IFACE;
-ip addr flush dev $VM_MANAGEMENT_IFACE;
-ip addr flush dev $HV_MANAGEMENT_IFACE;
-
-#WRITE NEW CONFIGURATION TO FILE
-echo "auto $CTF_IFACE" >> /etc/network/interfaces;
-echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
-echo "address $CTF_IP" >> /etc/network/interfaces;
-echo "netmask $CTF_SUBNET" >> /etc/network/interfaces;
-echo "network $CTF_NETWORK" >> /etc/network/interfaces;
-echo "gateway $CTF_GATEWAY" >> /etc/network/interfaces;
-echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
-echo "" >> /etc/network/interfaces;
-
-echo "CTF network configured. (1/3)";
-
-#gateway is omitted, add if present
-echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
-echo "iface $VM_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
-echo "address $VM_MANAGEMENT_IP" >> /etc/network/interfaces;
-echo "netmask $VM_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
-echo "" >> /etc/network/interfaces;
-
-echo "VM management network configured. (2/3)";
-
-#gateway is omitted, add if present
-echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
-echo "iface $HV_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
-echo "address $HV_MANAGEMENT_IP" >> /etc/network/interfaces;
-echo "netmask $HV_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
-echo "" >> /etc/network/interfaces;
-
-echo "Hypervisor management network configured. (3/3)";
-echo "Starting CTF network interface...";
-
-if ! ifup $CTF_IFACE;
+if [ $(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $CTF_IP ]
 then
-    echo "Unable to bring up $CTF_IFACE. Exiting...";
-    exit 1;
+	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
+	sed -i "/$CTF_IFACE/d" /etc/network/interfaces;
+
+	ifdown $CTF_IFACE;
+	#flush intefaces to prevent DHCP issues
+	ip addr flush dev $CTF_IFACE;
+	#WRITE NEW CONFIGURATION TO FILE
+	echo "auto $CTF_IFACE" >> /etc/network/interfaces;
+	echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $CTF_IP" >> /etc/network/interfaces;
+	echo "netmask $CTF_SUBNET" >> /etc/network/interfaces;
+	echo "network $CTF_NETWORK" >> /etc/network/interfaces;
+	echo "gateway $CTF_GATEWAY" >> /etc/network/interfaces;
+	echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "CTF network configured. (1/3)";
+	echo "Starting CTF network interface...";
+
+	if [ ! ifup $CTF_IFACE ]
+	then
+	    echo "Unable to bring up $CTF_IFACE. Exiting...";
+	    exit 1;
+	fi
+	echo "Done.";
 fi
 
-echo "Done.";
-echo "Starting VM management interface...";
-
-if ! ifup $VM_MANAGEMENT_IFACE;
+if [ $(ip addr show dev $VM_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $VM_MANAGEMENT_IP ]
 then
-    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
-    exit 1;
+	sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
+	ifdown $VM_MANAGEMENT_IFACE;
+	ip addr flush dev $VM_MANAGEMENT_IFACE;
+	#gateway is omitted, add if present
+	echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
+	echo "iface $VM_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $VM_MANAGEMENT_IP" >> /etc/network/interfaces;
+	echo "netmask $VM_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "VM management network configured. (2/3)";
+	echo "Starting VM management interface...";
+
+	if [ ! ifup $VM_MANAGEMENT_IFACE ]
+	then
+	    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
+	    exit 1;
+	fi
+
+	echo "Done.";
 fi
 
-echo "Done.";
-echo "Starting Hypervisor management interface...";
-
-if ! ifup $HV_MANAGEMENT_IFACE;
+if [ $(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1) != $HV_MANAGEMENT_IP ]
 then
-    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
-    exit 1;
+	sed -i "/$HV_MANAGEMENT_IFACE/d" /etc/network/interfaces;
+	ifdown $HV_MANAGEMENT_IFACE;
+	ip addr flush dev $HV_MANAGEMENT_IFACE;
+	#gateway is omitted, add if present
+	echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
+	echo "iface $HV_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $HV_MANAGEMENT_IP" >> /etc/network/interfaces;
+	echo "netmask $HV_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "Hypervisor management network configured. (3/3)";
+	echo "Starting Hypervisor management interface...";
+
+	if [ ! ifup $HV_MANAGEMENT_IFACE ]
+	then
+	    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
+	    exit 1;
+	fi
+
+	echo "Done.";
 fi
 
-echo "Done.";
 echo "Testing network connection...";
 
 #If machine has internet, continue
-if ! ping -c 4 8.8.8.8
+if [ ! ping -c 4 8.8.8.8 ]
 then
     echo "No internet access. Exiting...";
     exit 1;
@@ -161,7 +167,7 @@ echo "Updating package list & upgrading packages...";
 #UPDATES
 apt-get update;
 
-if ! apt-get upgrade -y;
+if [ ! apt-get upgrade -y ]
 then
     echo "Unable to upgrade packages. Exiting...";
     exit 1;
@@ -189,7 +195,7 @@ echo "Done.";
 echo "Configuring Docker to start on boot...";
 
 # Configure Docker daemon to start on boot
-if ! systemctl enable docker
+if [ ! systemctl enable docker ]
 then
     echo "Unable to configure Docker to start on boot. Exiting...";
     exit 1;
