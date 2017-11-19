@@ -510,7 +510,7 @@ echo "      - \"80:80\"" >> ./CTFd/docker-compose.yml;
 echo "      - \"443:443\"" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
-echo "      - ../nginx/reverse-proxy.template:/etc/nginx/conf.d/reverse-proxy.template" >> ./CTFd/docker-compose.yml;
+echo "      - ../nginx/reverse-proxy.template:/etc/nginx/reverse-proxy.template" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/cert.crt:/etc/nginx/cert.crt" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/cert.key:/etc/nginx/cert.key" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
