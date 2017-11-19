@@ -267,8 +267,6 @@ echo "Done.";
 
 echo "Generating Docker configuration for NGINX container...";
 
-mkdir -p ./nginx
-
 #if nginx directory does not exists, move nginx directory there
 if ! -d /home/$SYSTEM_USER/nginx
 then
