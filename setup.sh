@@ -449,7 +449,7 @@ echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
 echo "Done.";
 echo "Adding new parameters to gunicorn launch...";
 
-sed -i '/gunicorn/d' ./infile
+sed -i '/gunicorn/d' ./CTFd/docker-entrypoint.sh;
 echo "gunicorn --bind 0.0.0.0:443 -w 4 'CTFd:create_app()' --access-logfile '/opt/CTFd/CTFd/logs/access.log' --error-logfile '/opt/CTFd/CTFd/logs/error.log' --keyfile '/opt/CTFd/key.pem' --certfile '/opt/CTFd/cert.pem' --log-level debug" >> ./CTFd/docker-entrypoint.sh;
 
 echo "Done.";
