@@ -16,8 +16,8 @@ SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #plugins to install
-PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
-PLUGINS[1]="https://github.com/FreakyFreddie/challengevms";
+#PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
+#PLUGINS[1]="https://github.com/FreakyFreddie/challengevms";
 
 #themes to install
 THEMES[0]="https://github.com/ColdHeat/UnitedStates"
@@ -60,7 +60,7 @@ MARIADB_USER="CTFd";
 MARIADB_PASS="CTFd";
 
 #redis URL
-CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
+#CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
 
 #configuration for samba share (optional/easy way to access logs)
 SAMBA_USER=""
@@ -462,8 +462,8 @@ echo "    build: ." >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_ROOT_PASS@db/ctfd" >> ./CTFd/docker-compose.yml;
-echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
-echo "      - CACHE_REDIS_URL=$CACHE_REDIS_URL" >> ./CTFd/docker-compose.yml;
+echo "      - CTF_DNS_TSIG_KEY=\"$CTF_DNS_TSIG_KEY\"" >> ./CTFd/docker-compose.yml;
+#echo "      - CACHE_REDIS_URL=$CACHE_REDIS_URL" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
