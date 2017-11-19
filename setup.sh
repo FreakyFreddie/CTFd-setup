@@ -353,7 +353,7 @@ echo "    root /var/ctfd;" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "    location / {" >> ./nginx/reverse-proxy.template;
 echo "      # checks for static file, if not found proxy to app" >> ./nginx/reverse-proxy.template;
-echo "      try_files $uri @proxy_to_app;" >> ./nginx/reverse-proxy.template;
+echo '      try_files $uri @proxy_to_app;' >> ./nginx/reverse-proxy.template;
 echo "    }" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo '    location @proxy_to_app {' >> ./nginx/reverse-proxy.template;
