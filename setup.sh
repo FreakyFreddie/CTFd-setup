@@ -433,10 +433,9 @@ echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
 #echo "" >> ./CTFd/Dockerfile;
 #echo "COPY /home/$SYSTEM_USER/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
-echo "" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "VOLUME ["/opt/CTFd"]" >> ./CTFd/Dockerfile;
+echo "VOLUME [\"/opt/CTFd\"]" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "RUN pip3 install -r requirements.txt" >> ./CTFd/Dockerfile; #also install vsphere API dependencies# --extra-index-url /opt/vsphere-automation-sdk-python/lib"
 echo "" >> ./CTFd/Dockerfile;
