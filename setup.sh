@@ -185,7 +185,7 @@ echo "Adding SSH access...";
 apt-get install openssh-server -y > /dev/null;
 echo "Done.";
 
-echo "Installing CTFd dependencies...";
+echo "Installing platform dependencies...";
 
 #INSTALL DEPENDENCIES
 apt-get install git -y > /dev/null;
@@ -444,7 +444,7 @@ echo "RUN chmod +x /opt/CTFd/docker-entrypoint.sh" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "EXPOSE 443" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
-echo "ENTRYPOINT ["/opt/CTFd/docker-entrypoint.sh"]" >> ./CTFd/Dockerfile;
+echo "ENTRYPOINT [\"/opt/CTFd/docker-entrypoint.sh\"]" >> ./CTFd/Dockerfile;
 
 echo "Done.";
 echo "Adding new parameters to gunicorn launch...";
@@ -470,7 +470,6 @@ echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
 echo "    depends_on:" >> ./CTFd/docker-compose.yml;
 echo "      - db" >> ./CTFd/docker-compose.yml;
-echo "      - nginx" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
 echo "Added CTFd service (1/4).";
@@ -513,6 +512,8 @@ echo "      - .data/nginx:/var/log/nginx" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/reverse-proxy.template:/etc/nginx/reverse-proxy.template" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/cert.crt:/etc/nginx/cert.crt" >> ./CTFd/docker-compose.yml;
 echo "      - ../nginx/cert.key:/etc/nginx/cert.key" >> ./CTFd/docker-compose.yml;
+echo "    depends_on:" >> ./CTFd/docker-compose.yml;
+echo "      - ctfd" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
 echo "Added NGINX service as reverse proxy (4/4).";
