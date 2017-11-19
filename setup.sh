@@ -215,14 +215,14 @@ echo "Done.";
 echo "Generating Docker configuration for DNS container...";
 
 #if system user's directory does not exists, exit
-if ! -d /home/$SYSTEM_USER
+if [ ! -d /home/$SYSTEM_USER ]
 then
 	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again.";
    	exit 1;
 fi
 
 #if bind directory does not exists, move bind directory there
-if ! -d /home/$SYSTEM_USER/bind
+if [ ! -d /home/$SYSTEM_USER/bind ]
 then
     mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
 fi
@@ -268,7 +268,7 @@ echo "Done.";
 echo "Generating Docker configuration for NGINX container...";
 
 #if nginx directory does not exists, move nginx directory there
-if ! -d /home/$SYSTEM_USER/nginx
+if [ ! -d /home/$SYSTEM_USER/nginx ]
 then
     mv $SCRIPT_DIRECTORY/nginx /home/$SYSTEM_USER/nginx;
 fi
@@ -397,7 +397,7 @@ echo "}" >> ./nginx/reverse-proxy.template;
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
 echo "Cloning CTFd into home directory...";
 
-if ! -d /home/$SYSTEM_USER/CTFd
+if [ ! -d /home/$SYSTEM_USER/CTFd ]
 then
 	if ! git clone ${CTFd_REPOSITORY}
 	then
