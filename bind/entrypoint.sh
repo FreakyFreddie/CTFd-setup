@@ -1,7 +1,9 @@
 #!/bin/bash
 # script to configure and lauch BIND DNS
-chown root:bind /etc/bind/rndc.key;
-chmod 640 /etc/bind/rndc.key;
+#chown root:bind /etc/bind/rndc.key;
+#chmod 640 /etc/bind/rndc.key;
+
+/etc/init.d/bind9 stop
 
 if [ ! -d /var/log/bind9 ]; then
     mkdir /var/log/bind9/;
@@ -109,8 +111,6 @@ echo "zone \"$CTF_REVERSE_DNS\" {" >> /etc/bind/named.conf.local;
 echo "     type master;" >> /etc/bind/named.conf.local;
 echo "     file \"/etc/bind/zones/reverse/rev.$CTF_REVERSE_DNS\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
-
-/etc/init.d/bind9 restart
 
 #launch named on foreground (bind DNS daemon)
 /usr/sbin/named -f

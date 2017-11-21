@@ -193,7 +193,7 @@ apt-get install git -y > /dev/null;
 #pip install --upgrade pip;
 apt-get install docker -y > /dev/null;
 apt-get install docker-compose -y > /dev/null;
-apt-get install bind9 -y > /dev/null;
+apt-get install bind9utils -y > /dev/null;
 apt-get install mariadb-client -y > /dev/null;
 
 echo "Done.";
@@ -214,7 +214,7 @@ echo "Done.";
 
 echo "Generating Docker configuration for DNS container...";
 
-#if system user's directory does not exists, exit
+#if PATH directory does not exists, exit
 if [ ! -d $PATH ]
 then
 	echo "Error: User $PATH directory not found. Create $PATH and try again.";
@@ -258,6 +258,7 @@ echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> .
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "EXPOSE 53" >> ./bind/Dockerfile;
+echo "EXPOSE 953" >> ./bind/Dockerfile; #port 953 rndc in case of management, this port is only internally exposed
 echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./bind/Dockerfile;
 echo "Done.";
 
@@ -590,9 +591,6 @@ fi
 # OPTIONAL: SETUP NGINX REVERSE PROXY CONTAINER (to be added)
 
 echo "The platform can be reached on https://$CTF_IP.";
-
-#bind was only needed to generate TSIG
-apt-get remove bind9 -y;
 
 #cleanup apt
 apt-get clean
