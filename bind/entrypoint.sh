@@ -1,7 +1,7 @@
 #!/bin/bash
 # script to configure and lauch BIND DNS
-#chown root:bind /etc/bind/rndc.key;
-#chmod 640 /etc/bind/rndc.key;
+chown root:bind /etc/bind/rndc.key;
+chmod 640 /etc/bind/rndc.key;
 
 /etc/init.d/bind9 stop
 
