@@ -11,7 +11,7 @@ then
 fi
 
 #--------------------------------------PARAMETER DECLARATION--------------------------------------#
-SYSTEM_USER="ubuntu";
+PATH="/home/ubuntu";
 SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
@@ -67,7 +67,7 @@ SAMBA_USER=""
 SAMBA_PASS=""
 SAMBA_CONFIG=/etc/samba/smb.conf;
 FILE_SHARE="[$CTF_NAME]
-path = /home/$SYSTEM_USER/$CTF_NAME
+path = $PATH/$CTF_NAME
 valid users = $SAMBA_USER
 read only = no";
 
@@ -215,20 +215,20 @@ echo "Done.";
 echo "Generating Docker configuration for DNS container...";
 
 #if system user's directory does not exists, exit
-if [ ! -d /home/$SYSTEM_USER ]
+if [ ! -d $PATH ]
 then
-	echo "Error: User $SYSTEM_USER home directory not found. Create /home/$SYSTEM_USER and try again.";
+	echo "Error: User $PATH directory not found. Create $PATH and try again.";
    	exit 1;
 fi
 
 #if bind directory does not exists, move bind directory there
-if [ ! -d /home/$SYSTEM_USER/bind ]
+if [ ! -d $PATH/bind ]
 then
-    mv $SCRIPT_DIRECTORY/bind /home/$SYSTEM_USER/bind;
+    mv $SCRIPT_DIRECTORY/bind $PATH/bind;
 fi
 
 #GO TO HOME DIRECTORY
-cd /home/$SYSTEM_USER/bind;
+cd $PATH/bind;
 
 #generate TSIG for UPDATING RECORDS
 #COUNT=$(ls -1 *.key 2>/dev/null | wc -l)
@@ -244,10 +244,10 @@ CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
 rm ./*.private;
 rm ./*.key;
 
-cd /home/$SYSTEM_USER
+cd $PATH;
 
-touch ./bind/Dockerfile
-echo "FROM debian:latest" >> ./bind/Dockerfile;
+touch ./bind/Dockerfile;
+echo "FROM debian:latest" >> ./bind/Dockerfile; #slim debian distribution
 echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
@@ -268,15 +268,15 @@ echo "Done.";
 echo "Generating Docker configuration for NGINX container...";
 
 #if nginx directory does not exists, move nginx directory there
-if [ ! -d /home/$SYSTEM_USER/nginx ]
+if [ ! -d $PATH/nginx ]
 then
-    mv $SCRIPT_DIRECTORY/nginx /home/$SYSTEM_USER/nginx;
+    mv $SCRIPT_DIRECTORY/nginx $PATH/nginx;
 fi
 
 #GENERATE CERTIFICATE
 openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout ./nginx/cert.key -out ./nginx/cert.crt -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
 
-touch ./nginx/Dockerfile
+touch ./nginx/Dockerfile;
 echo "FROM nginx:latest" >> ./nginx/Dockerfile;
 echo "RUN mkdir -p /var/log/nginx" >> ./nginx/Dockerfile;
 echo "RUN mkdir -p /var/ctfd" >> ./nginx/Dockerfile;
@@ -289,7 +289,7 @@ echo "Done.";
 
 #GENERATE NGINX CONFIG TEMPLATE
 
-touch ./nginx/reverse-proxy.template
+touch ./nginx/reverse-proxy.template;
 echo "worker_processes 4;" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "user nobody nogroup;" >> ./nginx/reverse-proxy.template;
@@ -382,22 +382,22 @@ echo "}" >> ./nginx/reverse-proxy.template;
 #echo "Generating Docker configuration for redis container...";
 
 #if redis directory does not exists, move redis directory there
-#if [ ! -d /home/$SYSTEM_USER/redis ]; then
-#    mv $SCRIPT_DIRECTORY/redis /home/$SYSTEM_USER/redis;
+#if [ ! -d $PATH/redis ]; then
+#    mv $SCRIPT_DIRECTORY/redis $PATH/redis;
 #fi
 
 #generate redis config
 
-#touch ./redis/Dockerfile
+#touch ./redis/Dockerfile;
 #echo "FROM redis:latest" >> ./redis/Dockerfile;
 #echo "CMD [ \"redis-server\", \"/usr/local/etc/redis/redis.conf\" ]" >> ./redis/Dockerfile;
 #echo "Done.";
 
 #-----------------------------------------------------------------------------------------------------#
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
-echo "Cloning CTFd into home directory...";
+echo "Cloning CTFd into $PATH...";
 
-if [ ! -d /home/$SYSTEM_USER/CTFd ]
+if [ ! -d $PATH/CTFd ]
 then
 	if ! git clone ${CTFd_REPOSITORY}
 	then
@@ -409,7 +409,7 @@ fi
 echo "Done.";
 #echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
 
-#if ! git -C /home/$SYSTEM_USER clone https://github.com/vmware/vsphere-automation-sdk-python
+#if ! git -C $PATH clone https://github.com/vmware/vsphere-automation-sdk-python
 #then
 #	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
 #    exit 1;
@@ -432,7 +432,7 @@ echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
 #echo "" >> ./CTFd/Dockerfile;
-#echo "COPY /home/$SYSTEM_USER/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
+#echo "COPY $PATH/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "VOLUME [\"/opt/CTFd\"]" >> ./CTFd/Dockerfile;
@@ -487,7 +487,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added db service (2/4).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
-echo "    build: /home/$SYSTEM_USER/bind/" >> ./CTFd/docker-compose.yml;
+echo "    build: $PATH/bind/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
@@ -501,7 +501,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added bind service (3/4).";
 
 echo "  nginx:" >> ./CTFd/docker-compose.yml;
-echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
+echo "    build: $PATH/nginx/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"80:80\"" >> ./CTFd/docker-compose.yml;
@@ -518,7 +518,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added NGINX service as reverse proxy (4/4).";
 
 #echo "  redis:" >> ./CTFd/docker-compose.yml;
-#echo "    build: /home/$SYSTEM_USER/nginx/" >> ./CTFd/docker-compose.yml;
+#echo "    build: $PATH/nginx/" >> ./CTFd/docker-compose.yml;
 #echo "    restart: always" >> ./CTFd/docker-compose.yml;
 #echo "    expose:" >> ./CTFd/docker-compose.yml;
 #echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
