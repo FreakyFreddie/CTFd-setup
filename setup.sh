@@ -185,6 +185,11 @@ echo "Adding SSH access...";
 apt-get install openssh-server -y > /dev/null;
 echo "Done.";
 
+#ADD open-vm-tools (optional)
+echo "Adding open-vm-tools...";
+apt-get install open-vm-tools -y > /dev/null;
+echo "Done.";
+
 echo "Installing platform dependencies...";
 
 #INSTALL DEPENDENCIES
