@@ -11,7 +11,7 @@ then
 fi
 
 #--------------------------------------PARAMETER DECLARATION--------------------------------------#
-PATH="/home/ubuntu";
+INSTALLPATH="/home/ubuntu";
 SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
@@ -63,19 +63,16 @@ MARIADB_PASS="CTFd";
 #CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
 
 #configuration for samba share (optional/easy way to access logs)
-SAMBA_USER=""
-SAMBA_PASS=""
+SAMBA_USER="";
+SAMBA_PASS="";
 SAMBA_CONFIG=/etc/samba/smb.conf;
 FILE_SHARE="[$CTF_NAME]
-path = $PATH/$CTF_NAME
+path = $INSTALLPATH/$CTF_NAME
 valid users = $SAMBA_USER
 read only = no";
 
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
-echo "Removing automaticly configured interfaces to CTF Platform networks...";
-
-echo "Done.";
 echo "Configuring CTF Platform network interfaces where necessary..."
 
 if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
@@ -219,21 +216,21 @@ echo "Done.";
 
 echo "Generating Docker configuration for DNS container...";
 
-#if PATH directory does not exists, exit
-if [ ! -d $PATH ]
+#if INSTALLPATH directory does not exists, exit
+if [ ! -d $INSTALLPATH ]
 then
-	echo "Error: User $PATH directory not found. Create $PATH and try again.";
+	echo "Error: User $INSTALLPATH directory not found. Create $INSTALLPATH and try again.";
    	exit 1;
 fi
 
 #if bind directory does not exists, move bind directory there
-if [ ! -d $PATH/bind ]
+if [ ! -d $INSTALLPATH/bind ]
 then
-    mv $SCRIPT_DIRECTORY/bind $PATH/bind;
+    mv $SCRIPT_DIRECTORY/bind $INSTALLPATH/bind;
 fi
 
 #GO TO HOME DIRECTORY
-cd $PATH/bind;
+cd $INSTALLPATH/bind;
 
 #generate TSIG for UPDATING RECORDS
 #COUNT=$(ls -1 *.key 2>/dev/null | wc -l)
@@ -249,7 +246,7 @@ CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
 rm ./*.private;
 rm ./*.key;
 
-cd $PATH;
+cd $INSTALLPATH;
 
 touch ./bind/Dockerfile;
 echo "FROM debian:latest" >> ./bind/Dockerfile; #slim debian distribution
@@ -274,9 +271,9 @@ echo "Done.";
 echo "Generating Docker configuration for NGINX container...";
 
 #if nginx directory does not exists, move nginx directory there
-if [ ! -d $PATH/nginx ]
+if [ ! -d $INSTALLPATH/nginx ]
 then
-    mv $SCRIPT_DIRECTORY/nginx $PATH/nginx;
+    mv $SCRIPT_DIRECTORY/nginx $INSTALLPATH/nginx;
 fi
 
 #GENERATE CERTIFICATE
@@ -388,8 +385,8 @@ echo "}" >> ./nginx/reverse-proxy.template;
 #echo "Generating Docker configuration for redis container...";
 
 #if redis directory does not exists, move redis directory there
-#if [ ! -d $PATH/redis ]; then
-#    mv $SCRIPT_DIRECTORY/redis $PATH/redis;
+#if [ ! -d $INSTALLPATH/redis ]; then
+#    mv $SCRIPT_DIRECTORY/redis $INSTALLPATH/redis;
 #fi
 
 #generate redis config
@@ -401,9 +398,9 @@ echo "}" >> ./nginx/reverse-proxy.template;
 
 #-----------------------------------------------------------------------------------------------------#
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
-echo "Cloning CTFd into $PATH...";
+echo "Cloning CTFd into $INSTALLPATH...";
 
-if [ ! -d $PATH/CTFd ]
+if [ ! -d $INSTALLPATH/CTFd ]
 then
 	if ! git clone ${CTFd_REPOSITORY}
 	then
@@ -415,7 +412,7 @@ fi
 echo "Done.";
 #echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
 
-#if ! git -C $PATH clone https://github.com/vmware/vsphere-automation-sdk-python
+#if ! git -C $INSTALLPATH clone https://github.com/vmware/vsphere-automation-sdk-python
 #then
 #	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
 #    exit 1;
@@ -438,7 +435,7 @@ echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
 #echo "" >> ./CTFd/Dockerfile;
-#echo "COPY $PATH/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
+#echo "COPY $INSTALLPATH/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "VOLUME [\"/opt/CTFd\"]" >> ./CTFd/Dockerfile;
@@ -493,7 +490,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added db service (2/4).";
 
 echo "  bind:" >> ./CTFd/docker-compose.yml;
-echo "    build: $PATH/bind/" >> ./CTFd/docker-compose.yml;
+echo "    build: $INSTALLPATH/bind/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
@@ -507,7 +504,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added bind service (3/4).";
 
 echo "  nginx:" >> ./CTFd/docker-compose.yml;
-echo "    build: $PATH/nginx/" >> ./CTFd/docker-compose.yml;
+echo "    build: $INSTALLPATH/nginx/" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"80:80\"" >> ./CTFd/docker-compose.yml;
@@ -524,7 +521,7 @@ echo "" >> ./CTFd/docker-compose.yml;
 echo "Added NGINX service as reverse proxy (4/4).";
 
 #echo "  redis:" >> ./CTFd/docker-compose.yml;
-#echo "    build: $PATH/nginx/" >> ./CTFd/docker-compose.yml;
+#echo "    build: $INSTALLPATH/nginx/" >> ./CTFd/docker-compose.yml;
 #echo "    restart: always" >> ./CTFd/docker-compose.yml;
 #echo "    expose:" >> ./CTFd/docker-compose.yml;
 #echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
