@@ -100,7 +100,7 @@ echo "  algorithm hmac-md5;" >> /etc/bind/named.conf.local;
 echo "  secret \"$CTF_DNS_TSIG_KEY\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
 
-echo "zone \"$CTF_DNS_ROOT\" {" > /etc/bind/named.conf.local;
+echo "zone \"$CTF_DNS_ROOT\" {" >> /etc/bind/named.conf.local;
 echo "    type master;" >> /etc/bind/named.conf.local;
 echo "    file \"/etc/bind/zones/$CTF_DNS_ROOT\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
