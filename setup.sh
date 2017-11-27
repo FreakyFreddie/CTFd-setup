@@ -16,8 +16,7 @@ SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #plugins to install
-#PLUGINS[0]="https://github.com/tamuctf/ctfd-portable-challenges-plugin";
-#PLUGINS[1]="https://github.com/FreakyFreddie/challengevms";
+PLUGINS[0]="https://github.com/FreakyFreddie/challengevms";
 
 #themes to install
 THEMES[0]="https://github.com/ColdHeat/UnitedStates"
@@ -34,13 +33,11 @@ CTF_DNS="10.0.4.1";
 VM_MANAGEMENT_IFACE="ens34";
 VM_MANAGEMENT_IP="192.168.2.4";
 VM_MANAGEMENT_SUBNET="255.255.255.0";
-VM_MANAGEMENT_GATEWAY="192.168.2.1";
 
 #HYPERVISOR MANAGEMENT NETWORK SETTINGS (used to connect to vCenter server API, VLAN 5)
 HV_MANAGEMENT_IFACE="ens32";
 HV_MANAGEMENT_IP="192.168.1.254";
 HV_MANAGEMENT_SUBNET="255.255.255.0";
-HV_MANAGEMENT_GATEWAY="192.168.1.1";
 
 #CURRENT INTERFACE IPS
 CTF_IFACE_IP=$(ip addr show dev $CTF_IFACE | grep "inet\b" | awk '{print $2}' | cut -d/ -f1);
@@ -55,9 +52,9 @@ CTF_DNS_ROOT="myctf.be";
 CTF_NAME="ctf";
 
 #MARIADB CONTAINER CONFIG
-MARIADB_ROOT_PASS="CTFd";
+MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 MARIADB_USER="CTFd";
-MARIADB_PASS="CTFd";
+MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 
 #redis URL
 #CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
@@ -233,23 +230,17 @@ fi
 cd $INSTALLPATH/bind;
 
 #generate TSIG for UPDATING RECORDS
-#COUNT=$(ls -1 *.key 2>/dev/null | wc -l)
-#if [ $COUNT != 0 ]
-#else
-	#remove old key
-	#rm ./*.key;
-#fi
 dnssec-keygen -r /dev/urandom -a HMAC-MD5 -b 512 -n HOST $CTF_DNS_ROOT;
-CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
+CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7- | sed s/\ //);
 
-#keyfiles no longer needed as they will be written to containers
+#keyfiles no longer needed as they will be passed to containers through environment variables
 rm ./*.private;
 rm ./*.key;
 
 cd $INSTALLPATH;
 
 touch ./bind/Dockerfile;
-echo "FROM debian:latest" >> ./bind/Dockerfile; #slim debian distribution
+echo "FROM debian:latest" >> ./bind/Dockerfile;
 echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;

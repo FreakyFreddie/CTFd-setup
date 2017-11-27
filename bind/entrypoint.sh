@@ -72,8 +72,6 @@ fi
 echo "options {" > /etc/bind/named.conf.options;
 echo "        listen-on { any; };" >> /etc/bind/named.conf.options;
 echo "        listen-on-v6 { none; };" >> /etc/bind/named.conf.options;
-echo "        directory \"/var/cache/bind\";" >> /etc/bind/named.conf.options;
-echo "        auth-nxdomain no;" >> /etc/bind/named.conf.options;
 echo "        forwarders {" >> /etc/bind/named.conf.options;
 echo "                8.8.8.8;" >> /etc/bind/named.conf.options;
 echo "                8.8.4.4;" >> /etc/bind/named.conf.options;
