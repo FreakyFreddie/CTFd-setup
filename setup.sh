@@ -56,9 +56,6 @@ MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' 
 MARIADB_USER="CTFd";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 
-#redis URL
-#CACHE_REDIS_URL="redis://redis:redis@localhost:6379";
-
 #configuration for samba share (optional/easy way to access logs)
 SAMBA_USER="";
 SAMBA_PASS="";
@@ -276,7 +273,7 @@ then
 fi
 
 #GENERATE CERTIFICATE
-openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout ./nginx/cert.key -out ./nginx/cert.crt -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
+openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout ./nginx/cert.key -out ./nginx/cert.crt -subj "/CN=$CTF_DNS_ROOT/O=EvilCorp LTD./C=BE";
 
 touch ./nginx/Dockerfile;
 echo "FROM nginx:latest" >> ./nginx/Dockerfile;
@@ -292,7 +289,7 @@ echo "Done.";
 #GENERATE NGINX CONFIG TEMPLATE
 
 touch ./nginx/reverse-proxy.template;
-echo "worker_processes 4;" >> ./nginx/reverse-proxy.template;
+echo "worker_processes 1;" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "user nobody nogroup;" >> ./nginx/reverse-proxy.template;
 echo "# 'user nobody nobody;' for systems with 'nobody' as a group instead" >> ./nginx/reverse-proxy.template;
@@ -301,9 +298,7 @@ echo "error_log /tmp/nginx.error.log;" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "events {" >> ./nginx/reverse-proxy.template;
 echo "  worker_connections 1024; # increase if you have lots of clients" >> ./nginx/reverse-proxy.template;
-echo "  accept_mutex on; # set to 'on' if nginx worker_processes > 1" >> ./nginx/reverse-proxy.template;
-echo "  use epoll; # to enable for Linux 2.6+" >> ./nginx/reverse-proxy.template;
-echo "  # 'use kqueue;' to enable for FreeBSD, OSX" >> ./nginx/reverse-proxy.template;
+echo "  accept_mutex off; # set to 'on' if nginx worker_processes > 1" >> ./nginx/reverse-proxy.template;
 echo "}" >> ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "http {" >> ./nginx/reverse-proxy.template;
@@ -402,8 +397,6 @@ echo "" >> ./CTFd/Dockerfile;
 echo "RUN mkdir -p /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "COPY . /opt/CTFd" >> ./CTFd/Dockerfile;
-#echo "" >> ./CTFd/Dockerfile;
-#echo "COPY $INSTALLPATH/vsphere-automation-sdk-python/lib /opt/vsphere-automation-sdk-python/lib" >> ./CTFd/Dockerfile;
 echo "WORKDIR /opt/CTFd" >> ./CTFd/Dockerfile;
 echo "" >> ./CTFd/Dockerfile;
 echo "VOLUME [\"/opt/CTFd\"]" >> ./CTFd/Dockerfile;
@@ -417,13 +410,54 @@ echo "" >> ./CTFd/Dockerfile;
 echo "ENTRYPOINT [\"/opt/CTFd/docker-entrypoint.sh\"]" >> ./CTFd/Dockerfile;
 
 echo "Done.";
-echo "Adding new parameters to gunicorn launch...";
+echo "Generating self-signed certificate for connection between CTFd and Nginx";
 
+cd $INSTALLPATH/CTFd;
+openssl req -x509 -nodes -newkey rsa:4096  -keyout key.pem -out cert.pem -days 365 -subj "/CN=$CTF_DNS_ROOT/O=EvilCorp LTD./C=BE";
+
+echo "Done.";
+
+echo "Adding new parameters to gunicorn launch...";
+cd $INSTALLPATH;
 sed -i '/gunicorn/d' ./CTFd/docker-entrypoint.sh;
 echo "gunicorn --bind 0.0.0.0:443 -w 1 'CTFd:create_app()' --access-logfile '/opt/CTFd/CTFd/logs/access.log' --error-logfile '/opt/CTFd/CTFd/logs/error.log' --keyfile '/opt/CTFd/key.pem' --certfile '/opt/CTFd/cert.pem'" >> ./CTFd/docker-entrypoint.sh; # --log-level debug
 
 echo "Done.";
+echo "Cloning plugins...";
+
+cd $INSTALLPATH/CTFd/CTFd/plugins;
+
+#clone plugins to plugin folder
+for i in "${PLUGINS[@]}"
+do
+   	if ! git clone $i
+	then
+		echo "git clone $i failed. Exiting..."
+	    exit 1;
+	fi
+   	echo "Cloned $i.";
+done
+
+echo "Done.";
+echo "Cloning themes...";
+
+cd $INSTALLPATH/CTFd/CTFd/themes;
+
+#clone themes to theme folder
+for i in "${THEMES[@]}"
+do
+   	if ! git clone $i
+	then
+		echo "git clone $i failed. Exiting..."
+	    exit 1;
+	fi
+   	echo "Cloned $i.";
+done
+
+echo "Done.";
 echo "Recreating docker-compose.yml with new configuration...";
+
+cd $INSTALLPATH;
 
 echo "version: '2'" > ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
@@ -433,8 +467,6 @@ echo "    build: ." >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
 echo "      - DATABASE_URL=mysql+pymysql://root:$MARIADB_ROOT_PASS@db/ctfd" >> ./CTFd/docker-compose.yml;
-echo "      - CTF_DNS_TSIG_KEY=\"$CTF_DNS_TSIG_KEY\"" >> ./CTFd/docker-compose.yml;
-#echo "      - CACHE_REDIS_URL=$CACHE_REDIS_URL" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
@@ -488,48 +520,10 @@ echo "      - ctfd" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
 echo "Added NGINX service as reverse proxy (4/4).";
-echo "Generating self-signed certificate for connection between ...";
 
-cd CTFd;
-openssl req -x509 -nodes -newkey rsa:4096  -keyout key.pem -out cert.pem -days 365 -subj '/CN=ctf.tm.be/O=EvilCorp LTD./C=BE';
-
-echo "Done.";
-
-echo "Cloning plugins...";
-
-cd ./CTFd/plugins;
-
-#clone plugins to plugin folder
-for i in "${PLUGINS[@]}"
-do
-   	if ! git clone $i
-	then
-		echo "git clone $i failed. Exiting..."
-	    exit 1;
-	fi
-   	echo "Cloned $i.";
-done
-
-echo "Done.";
-echo "Cloning themes...";
-
-cd ../themes;
-
-#clone themes to theme folder
-for i in "${THEMES[@]}"
-do
-   	if ! git clone $i
-	then
-		echo "git clone $i failed. Exiting..."
-	    exit 1;
-	fi
-   	echo "Cloned $i.";
-done
-
-echo "Done.";
 echo "Launching platform...";
 
-cd ../..;
+# cd $INSTALLPATH
 
 #DEV - CREATE SAMBA SHARE FOR DIRECTORY CTFd (easy log access)
 #apt-get install samba -y;
@@ -538,10 +532,16 @@ cd ../..;
 #echo -ne "$SAMBA_PASS\n$SAMBA_PASS\n" | smbpasswd -a -s $SAMBA_USER;
 #service smbd restart;
 
-#LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
-#CHANGE DOCKER-COMPOSE PASSWORDS
-cd CTFd;
+#cleanup apt
+apt-get clean
 
+#cleanup shell history
+history -w
+history -c
+
+cd $INSTALLPATH/CTFd
+
+#LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
 if ! docker-compose up
 then
     echo "Unable to launch containers. Exiting...";
@@ -550,12 +550,4 @@ fi
 
 
 echo "The platform can be reached on https://$CTF_IP.";
-
-#cleanup apt
-apt-get clean
-
-#cleanup shell history
-history -w
-history -c
-
 #------------------------------------------------------------------------------------------------------------------#

@@ -103,6 +103,7 @@ echo "};" >> /etc/bind/named.conf.local;
 echo "zone \"$CTF_DNS_ROOT\" {" >> /etc/bind/named.conf.local;
 echo "    type master;" >> /etc/bind/named.conf.local;
 echo "    allow-update { key \"update_key\"; };" >> /etc/bind/named.conf.local;
+echo "    allow-transfer { key \"update_key\"; };" >> /etc/bind/named.conf.local;
 echo "    file \"/etc/bind/zones/$CTF_DNS_ROOT\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
 
