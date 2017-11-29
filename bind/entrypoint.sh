@@ -27,7 +27,7 @@ if [ ! -d /etc/bind/zones ]; then
         #Only write DNS records on first run, else new records may be overwritten
         echo '$TTL 1d' > /etc/bind/zones/$CTF_DNS_ROOT;
         echo "@       IN      SOA     ns1.$CTF_DNS_ROOT. admin.$CTF_DNS_ROOT. (" >> /etc/bind/zones/$CTF_DNS_ROOT;
-        echo "                        1       ; SERIAL = version of zone file, needs to be incremented every time file is changed" >> /etc/bind/zones/$CTF_DNS_ROOT;
+        echo "                        1       ; SERIAL" >> /etc/bind/zones/$CTF_DNS_ROOT;
         echo "                        3h      ; Refresh" >> /etc/bind/zones/$CTF_DNS_ROOT;
         echo "                        1h      ; Retry" >> /etc/bind/zones/$CTF_DNS_ROOT;
         echo "                        1w      ; Expire" >> /etc/bind/zones/$CTF_DNS_ROOT;
@@ -95,13 +95,14 @@ echo "};" >> /etc/bind/named.conf.options;
 
 #named.conf.local
 #key to update zone
-echo "key \"$CTF_DNS_ROOT.\" {" > /etc/bind/named.conf.local;
+echo "key \"update_key\" {" > /etc/bind/named.conf.local;
 echo "  algorithm hmac-md5;" >> /etc/bind/named.conf.local;
 echo "  secret \"$CTF_DNS_TSIG_KEY\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
 
 echo "zone \"$CTF_DNS_ROOT\" {" >> /etc/bind/named.conf.local;
 echo "    type master;" >> /etc/bind/named.conf.local;
+echo "    allow-update { key \"update_key\"; };" >> /etc/bind/named.conf.local;
 echo "    file \"/etc/bind/zones/$CTF_DNS_ROOT\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
 

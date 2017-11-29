@@ -220,24 +220,32 @@ then
    	exit 1;
 fi
 
-#if bind directory does not exists, move bind directory there
+# if bind directory does not exists, move bind directory there
 if [ ! -d $INSTALLPATH/bind ]
 then
     mv $SCRIPT_DIRECTORY/bind $INSTALLPATH/bind;
 fi
 
-#GO TO HOME DIRECTORY
+# GO TO HOME DIRECTORY
 cd $INSTALLPATH/bind;
 
-#generate TSIG for UPDATING RECORDS
+# generate TSIG for UPDATING RECORDS
 dnssec-keygen -r /dev/urandom -a HMAC-MD5 -b 512 -n HOST $CTF_DNS_ROOT;
-CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7- | sed s/\ //);
+CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
 
-#keyfiles no longer needed as they will be passed to containers through environment variables
+
+# keyfiles no longer needed as they will be passed to containers through environment variables and bind key file
 rm ./*.private;
 rm ./*.key;
 
 cd $INSTALLPATH;
+
+# generate the bind key file (later mounted in CTFd container)
+touch ./bind/update_key.key
+echo "key \"update_key\" {" >> ./bind/update_key.key;
+echo "	algorithm HMAC-MD5;" >> ./bind/update_key.key;
+echo "	secret \"$CTF_DNS_TSIG_KEY\";" >> ./bind/update_key.key;
+echo "};" >> ./bind/update_key.key;
 
 touch ./bind/Dockerfile;
 echo "FROM debian:latest" >> ./bind/Dockerfile;
@@ -370,24 +378,6 @@ echo "}" >> ./nginx/reverse-proxy.template;
 
 
 #-----------------------------------------------------------------------------------------------------#
-#--------------------------------------REDIS CONTAINER CONFIGURATION----------------------------------#
-# Generate Docker file with environment variables set
-
-#echo "Generating Docker configuration for redis container...";
-
-#if redis directory does not exists, move redis directory there
-#if [ ! -d $INSTALLPATH/redis ]; then
-#    mv $SCRIPT_DIRECTORY/redis $INSTALLPATH/redis;
-#fi
-
-#generate redis config
-
-#touch ./redis/Dockerfile;
-#echo "FROM redis:latest" >> ./redis/Dockerfile;
-#echo "CMD [ \"redis-server\", \"/usr/local/etc/redis/redis.conf\" ]" >> ./redis/Dockerfile;
-#echo "Done.";
-
-#-----------------------------------------------------------------------------------------------------#
 #------------------------------------------CTF CONFIGURATION------------------------------------------#
 echo "Cloning CTFd into $INSTALLPATH...";
 
@@ -399,19 +389,6 @@ then
 	    exit 1;
 	fi
 fi
-
-echo "Done.";
-#echo "Adding cloning vSphere api and adding requirements to CTFd requirements.txt...";
-
-#if ! git -C $INSTALLPATH clone https://github.com/vmware/vsphere-automation-sdk-python
-#then
-#	echo "git clone https://github.com/vmware/vsphere-automation-sdk-python failed. Exiting...";
-#    exit 1;
-#fi
-
-#echo $(cat ./vsphere-automation-sdk-python/requirements.txt) >> ./CTFd/requirements.txt;
-
-#ADD VSPHERE API REQUIREMENTS TO FILE
 
 echo "Done.";
 echo "Regenerating CTFd Docker configuration to use the latest Debian Python image with Python 3 and install dnsutils (nsupdate)...";
@@ -461,6 +438,7 @@ echo "      - CTF_DNS_TSIG_KEY=\"$CTF_DNS_TSIG_KEY\"" >> ./CTFd/docker-compose.y
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/logs:/opt/CTFd/CTFd/logs" >> ./CTFd/docker-compose.yml;
 echo "      - .data/CTFd/uploads:/opt/CTFd/CTFd/uploads" >> ./CTFd/docker-compose.yml;
+echo "      - $INSTALLPATH/bind/update_key.key:/opt/CTFd/update_key.key" >> ./CTFd/docker-compose.yml;
 echo "    depends_on:" >> ./CTFd/docker-compose.yml;
 echo "      - db" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
@@ -510,16 +488,6 @@ echo "      - ctfd" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
 echo "Added NGINX service as reverse proxy (4/4).";
-
-#echo "  redis:" >> ./CTFd/docker-compose.yml;
-#echo "    build: $INSTALLPATH/nginx/" >> ./CTFd/docker-compose.yml;
-#echo "    restart: always" >> ./CTFd/docker-compose.yml;
-#echo "    expose:" >> ./CTFd/docker-compose.yml;
-#echo "      - \"46379\"" >> ./CTFd/docker-compose.yml;
-#echo "    volumes:" >> ./CTFd/docker-compose.yml;
-#echo "      - ../redis/redis.conf:/usr/local/etc/redis/redis.conf" >> ./CTFd/docker-compose.yml;
-
-#echo "Added redis service (5/5).";
 echo "Generating self-signed certificate for connection between ...";
 
 cd CTFd;
@@ -579,9 +547,7 @@ then
     echo "Unable to launch containers. Exiting...";
     exit 1;
 fi
-#------------------------------------------------------------------------------------------------------------------#
 
-# OPTIONAL: SETUP NGINX REVERSE PROXY CONTAINER (to be added)
 
 echo "The platform can be reached on https://$CTF_IP.";
 
@@ -591,3 +557,5 @@ apt-get clean
 #cleanup shell history
 history -w
 history -c
+
+#------------------------------------------------------------------------------------------------------------------#
