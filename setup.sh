@@ -16,7 +16,8 @@ SCRIPT_DIRECTORY=$(dirname $(readlink -f $0));
 CTFd_REPOSITORY="https://github.com/CTFd/CTFd.git";
 
 #plugins to install
-PLUGINS[0]="https://github.com/FreakyFreddie/challengevms";
+PLUGINS[0]="https://github.com/FreakyFreddie/vspherevms";
+PLUGINS[1]="https://github.com/FreakyFreddie/challengedns";
 
 #themes to install
 THEMES[0]="https://github.com/ColdHeat/UnitedStates"
