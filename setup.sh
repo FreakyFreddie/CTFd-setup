@@ -239,14 +239,12 @@ rm ./*.key;
 cd $INSTALLPATH;
 
 # generate the bind key file (later mounted in CTFd container)
-touch ./bind/update_key.key
-echo "key \"update_key\" {" >> ./bind/update_key.key;
+echo "key \"update_key\" {" > ./bind/update_key.key;
 echo "	algorithm HMAC-MD5;" >> ./bind/update_key.key;
 echo "	secret \"$CTF_DNS_TSIG_KEY\";" >> ./bind/update_key.key;
 echo "};" >> ./bind/update_key.key;
 
-touch ./bind/Dockerfile;
-echo "FROM debian:latest" >> ./bind/Dockerfile;
+echo "FROM debian:latest" > ./bind/Dockerfile;
 echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
 echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
@@ -276,8 +274,7 @@ fi
 #GENERATE CERTIFICATE
 openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout ./nginx/cert.key -out ./nginx/cert.crt -subj "/CN=$CTF_DNS_ROOT/O=EvilCorp LTD./C=BE";
 
-touch ./nginx/Dockerfile;
-echo "FROM nginx:latest" >> ./nginx/Dockerfile;
+echo "FROM nginx:latest" > ./nginx/Dockerfile;
 echo "RUN mkdir -p /var/log/nginx" >> ./nginx/Dockerfile;
 echo "RUN mkdir -p /var/ctfd" >> ./nginx/Dockerfile;
 echo "COPY ./entrypoint.sh /sbin/entrypoint.sh" >> ./nginx/Dockerfile;
@@ -288,9 +285,7 @@ echo "ENTRYPOINT [\"/sbin/entrypoint.sh\"]" >> ./nginx/Dockerfile;
 echo "Done.";
 
 #GENERATE NGINX CONFIG TEMPLATE
-
-touch ./nginx/reverse-proxy.template;
-echo "worker_processes 1;" >> ./nginx/reverse-proxy.template;
+echo "worker_processes 1;" > ./nginx/reverse-proxy.template;
 echo "" >> ./nginx/reverse-proxy.template;
 echo "user nobody nogroup;" >> ./nginx/reverse-proxy.template;
 echo "# 'user nobody nobody;' for systems with 'nobody' as a group instead" >> ./nginx/reverse-proxy.template;
