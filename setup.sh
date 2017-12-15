@@ -227,8 +227,8 @@ fi
 # GO TO HOME DIRECTORY
 cd $INSTALLPATH/bind;
 
-# generate TSIG for UPDATING RECORDS
-dnssec-keygen -r /dev/urandom -a HMAC-MD5 -b 512 -n HOST $CTF_DNS_ROOT;
+# generate TSIG for UPDATING RECORDS HMAC keys must be between 1 and 512 bit
+dnssec-keygen -r /dev/urandom -a HMAC-SHA512 -b 512 -n HOST $CTF_DNS_ROOT;
 CTF_DNS_TSIG_KEY=$(cat ./*.key | cut -d\  -f7-);
 
 
@@ -240,7 +240,7 @@ cd $INSTALLPATH;
 
 # generate the bind key file (later mounted in CTFd container)
 echo "key \"update_key\" {" > ./bind/update_key.key;
-echo "	algorithm HMAC-MD5;" >> ./bind/update_key.key;
+echo "	algorithm HMAC-SHA512;" >> ./bind/update_key.key;
 echo "	secret \"$CTF_DNS_TSIG_KEY\";" >> ./bind/update_key.key;
 echo "};" >> ./bind/update_key.key;
 
