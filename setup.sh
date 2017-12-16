@@ -59,18 +59,11 @@ MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fol
 
 #print error with message if set, otherwise error will be trapped without message
 error() {
-  if [[ -n "$2" ]] ; then
-    echo "Error line $1: $2; exiting with status ${3:-1}"
-  else
-    echo "Error line $1; exiting with status ${3:-1}"
-  fi
-  exit "${3:-1}"
+	echo "Error line $1: $2; exiting with status ${3:-1}"
+	exit "${3:-1}"
 }
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
-#action for otherwise uncaught error
-trap 'error ${LINENO}' ERR;
-
 echo "Configuring CTF Platform network interfaces where necessary..."
 
 if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
@@ -100,7 +93,7 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if ! ifup $CTF_IFACE 2>error.log 2>&1
+	if ! ifup $CTF_IFACE 2>&1
 	then
 		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
 	fi
