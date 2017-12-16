@@ -100,9 +100,7 @@ then
 
 	if ! ifup $CTF_IFACE
 	then
-		error "$LINENO: An error has occurred.";
-	    echo "Unable to bring up $CTF_IFACE. Exiting...";
-	    exit 1;
+		error $LINENO;
 	fi
 	echo "Done.";
 fi
