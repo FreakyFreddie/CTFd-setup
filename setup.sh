@@ -77,9 +77,10 @@ if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
 then
 	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
 	echo 'source /etc/network/interfaces.d/*' > /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
 	echo "auto lo" >> /etc/network/interfaces;
 	echo "iface lo inet loopback" >> /etc/network/interfaces;
-	echo ""
+	echo "" >> /etc/network/interfaces;
 
 	ifdown $CTF_IFACE;
 
