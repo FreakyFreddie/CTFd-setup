@@ -57,20 +57,18 @@ MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' 
 MARIADB_USER="CTFd";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 
-error()
-{
-	local lineno="$1"
-	local message="$2"
-	local code="${3:-1}"
-	if [[ -n "$message" ]] ; then
-		echo "Error on or near line ${lineno}: ${message}; exiting with status ${code}" 1>&2;
-	else
-		echo "Error on or near line ${parent_lineno}; exiting with status ${code}" 1>&2;
-
-	fi
-	exit 1
+error() {
+  local parent_lineno="$1"
+  local message="$2"
+  local code="${3:-1}"
+  if [[ -n "$message" ]] ; then
+    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
+  else
+    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
+  fi
+  exit "${code}"
 }
-trap 'error ${LINENO}' ERR;
+trap 'error ${LINENO}' ERR
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
 echo "Configuring CTF Platform network interfaces where necessary..."
