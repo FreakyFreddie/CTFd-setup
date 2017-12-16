@@ -70,6 +70,7 @@ error()
 	fi
 	exit 1
 }
+trap 'error ${LINENO}' ERR;
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
 echo "Configuring CTF Platform network interfaces where necessary..."
@@ -98,10 +99,7 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if ! ifup $CTF_IFACE
-	then
-		error $LINENO;
-	fi
+	ifup $CTF_IFACE;
 	echo "Done.";
 fi
 
