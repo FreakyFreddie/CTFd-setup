@@ -24,7 +24,7 @@ THEMES[0]="https://github.com/ColdHeat/UnitedStates"
 
 #CTF NETWORK SETTINGS (users connect to this interface, VLAN 15)
 CTF_IFACE="ens33";
-CTF_IP="10.0.7..4";
+CTF_IP="10.0.7.4";
 CTF_SUBNET="255.255.252.0";
 CTF_GATEWAY="10.0.4.1";
 CTF_NETWORK="10.0.4.0";
@@ -57,20 +57,20 @@ MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' 
 MARIADB_USER="CTFd";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 
+#print error with message if set, otherwise error will be trapped without message
 error() {
-  local parent_lineno="$1"
-  local message="$2"
-  local code="${3:-1}"
-  if [[ -n "$message" ]] ; then
-    echo "Error near line ${parent_lineno}: ${message}; exiting with status ${code}"
+  if [[ -n "$2" ]] ; then
+    echo "Error line $1: $2; Check error.log for more information; exiting with status ${3:-1}"
   else
-    echo "Error near line ${parent_lineno}; exiting with status ${code}"
+    echo "Error line $1; Check error.log for more information; exiting with status ${3:-1}"
   fi
-  exit "${code}"
+  exit "${3:-1}"
 }
-trap 'error ${LINENO}' ERR;
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
+#action for otherwise uncaught error
+trap 'error ${LINENO}' ERR;
+
 echo "Configuring CTF Platform network interfaces where necessary..."
 
 if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
@@ -82,8 +82,10 @@ then
 	echo ""
 
 	ifdown $CTF_IFACE;
+
 	#flush intefaces to prevent DHCP issues
 	ip addr flush dev $CTF_IFACE;
+
 	#WRITE NEW CONFIGURATION TO FILE
 	echo "auto $CTF_IFACE" >> /etc/network/interfaces;
 	echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
@@ -97,18 +99,18 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if ! ifup $CTF_IFACE 2>error.log
+	if ! ifup $CTF_IFACE 2>error.log 2>>&1
 	then
-		error ${LINENO} "Unable to bring up $CTF_IFACE." 1;
+		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
 	fi
 	echo "Done.";
 fi
 
 if [ "$VM_MANAGEMENT_IFACE_IP" != "$VM_MANAGEMENT_IP" ]
 then
-	sed -i "/$VM_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 	ifdown $VM_MANAGEMENT_IFACE;
 	ip addr flush dev $VM_MANAGEMENT_IFACE;
+
 	#gateway is omitted, add if present
 	echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
 	echo "iface $VM_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
@@ -119,10 +121,9 @@ then
 	echo "VM management network configured. (2/3)";
 	echo "Starting VM management interface...";
 
-	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
+	if ! ifup $VM_MANAGEMENT_IFACE 2>>error.log 2>&1
 	then
-	    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
-	    exit 1;
+		error ${LINENO} "Unable to bring up $VM_MANAGEMENT_IFACE" 1;
 	fi
 
 	echo "Done.";
@@ -130,9 +131,9 @@ fi
 
 if [ "$HV_MANAGEMENT_IFACE_IP" != "$HV_MANAGEMENT_IP" ]
 then
-	sed -i "/$HV_MANAGEMENT_IFACE/d" /etc/network/interfaces;
 	ifdown $HV_MANAGEMENT_IFACE;
 	ip addr flush dev $HV_MANAGEMENT_IFACE;
+
 	#gateway is omitted, add if present
 	echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
 	echo "iface $HV_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
@@ -143,10 +144,9 @@ then
 	echo "Hypervisor management network configured. (3/3)";
 	echo "Starting Hypervisor management interface...";
 
-	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
+	if ! ifup $HV_MANAGEMENT_IFACE 2>>error.log 2>&1
 	then
-	    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
-	    exit 1;
+		error ${LINENO} "Unable to bring up $HV_MANAGEMENT_IFACE" 1;
 	fi
 
 	echo "Done.";
@@ -155,10 +155,9 @@ fi
 echo "Testing network connection...";
 
 #If machine has internet, continue
-if ! ping -c 4 8.8.8.8
+if ! ping -c 4 8.8.8.8 2>>error.log 2>&1
 then
-    echo "No internet access. Exiting...";
-    exit 1;
+	error ${LINENO} "No internet access" 1;
 fi
 
 echo "Internet access detected.";
@@ -167,12 +166,11 @@ echo "Internet access detected.";
 echo "Updating package list & upgrading packages...";
 
 #UPDATES
-apt-get update > /dev/null;
+apt-get update >/dev/null;
 
-if ! apt-get upgrade -y > /dev/null
+if ! apt-get upgrade -y >/dev/null 2>>error.log 2>&1
 then
-    echo "Unable to upgrade packages. Exiting...";
-    exit 1;
+	error ${LINENO} "Unable to upgrade packages" 1;
 fi
 
 echo "Done.";
@@ -202,10 +200,9 @@ echo "Done.";
 echo "Configuring Docker to start on boot...";
 
 # Configure Docker daemon to start on boot
-if ! systemctl enable docker
+if ! systemctl enable docker 2>>error.log 2>&1
 then
-    echo "Unable to configure Docker to start on boot. Exiting...";
-    exit 1;
+	error ${LINENO} "Unable to configure Docker to start on boot" 1;
 fi
 
 echo "Done.";
@@ -219,7 +216,7 @@ echo "Generating Docker configuration for DNS container...";
 #if INSTALLPATH directory does not exists, exit
 if [ ! -d $INSTALLPATH ]
 then
-	echo "Error: User $INSTALLPATH directory not found. Create $INSTALLPATH and try again.";
+	echo "Error: $INSTALLPATH directory not found. Create $INSTALLPATH and try again.";
    	exit 1;
 fi
 
@@ -379,10 +376,9 @@ echo "Cloning CTFd into $INSTALLPATH...";
 
 if [ ! -d $INSTALLPATH/CTFd ]
 then
-	if ! git clone ${CTFd_REPOSITORY}
+	if ! git clone ${CTFd_REPOSITORY} 2>>error.log 2>&1
 	then
-		echo "git clone ${CTFd_REPOSITORY} failed. Exiting...";
-	    exit 1;
+		error ${LINENO} "Git clone ${CTFd_REPOSITORY} failed" 1;
 	fi
 fi
 
@@ -431,10 +427,9 @@ cd $INSTALLPATH/CTFd/CTFd/plugins;
 #clone plugins to plugin folder
 for i in "${PLUGINS[@]}"
 do
-   	if ! git clone $i
+   	if ! git clone $i 2>>error.log 2>&1
 	then
-		echo "git clone $i failed. Exiting..."
-	    exit 1;
+		error ${LINENO} "Git clone ${PLUGINS[@]} failed" 1;
 	fi
    	echo "Cloned $i.";
 done
@@ -447,10 +442,9 @@ cd $INSTALLPATH/CTFd/CTFd/themes;
 #clone themes to theme folder
 for i in "${THEMES[@]}"
 do
-   	if ! git clone $i
+   	if ! git clone $i 2>>error.log 2>&1
 	then
-		echo "git clone $i failed. Exiting..."
-	    exit 1;
+		error ${LINENO} "Git clone ${THEMES[@]} failed" 1;
 	fi
    	echo "Cloned $i.";
 done
@@ -534,10 +528,9 @@ history -c
 cd $INSTALLPATH/CTFd
 
 #LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
-if ! docker-compose up
+if ! docker-compose up 2>>error.log 2>&1
 then
-    echo "Unable to launch containers. Exiting...";
-    exit 1;
+	error ${LINENO} "Unable to bring up containers" 1;
 fi
 
 echo "The platform can be reached on https://$CTF_IP.";
