@@ -521,6 +521,9 @@ history -c
 
 cd $INSTALLPATH/CTFd
 
+#add requirements
+cat ./CTFd/plugins/*/requirements.txt >> ./requirements.txt;
+
 #LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
 if ! docker-compose up 2>&1
 then
