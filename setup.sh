@@ -54,7 +54,7 @@ CTF_NAME="ctf";
 
 #MARIADB CONTAINER CONFIG
 MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1);
-MARIADB_USER="CTFd";
+MARIADB_USER="ctfdtm";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1);
 
 #print error with message if set, otherwise error will be trapped without message
