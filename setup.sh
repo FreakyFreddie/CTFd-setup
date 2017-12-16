@@ -6,7 +6,7 @@
 #-install bind DNS in a separate container
 if [ $EUID -ne 0 ]
 then
-	echo "RUN THE SCRIPT AS ROOT.";
+	echo "RUN THE SCRIPT WITH ROOT PRIVILEGES.";
 	exit 1;
 fi
 
@@ -24,7 +24,7 @@ THEMES[0]="https://github.com/ColdHeat/UnitedStates"
 
 #CTF NETWORK SETTINGS (users connect to this interface, VLAN 15)
 CTF_IFACE="ens33";
-CTF_IP="10.0.7.4";
+CTF_IP="10.0.7..4";
 CTF_SUBNET="255.255.252.0";
 CTF_GATEWAY="10.0.4.1";
 CTF_NETWORK="10.0.4.0";
@@ -49,22 +49,13 @@ HV_MANAGEMENT_IFACE_IP=$(ip addr show dev $HV_MANAGEMENT_IFACE | grep "inet\b" |
 CTF_DNS_IP="10.0.7.4";
 CTF_REVERSE_DNS=$(echo $CTF_DNS_IP | awk -F . '{print $3"."$2"."$1".in-addr.arpa"}');
 #DNS RECORD
-CTF_DNS_ROOT="myctf.be";
+CTF_DNS_ROOT="tmctf.be";
 CTF_NAME="ctf";
 
 #MARIADB CONTAINER CONFIG
 MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
 MARIADB_USER="CTFd";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 25 | head -n 1);
-
-#configuration for samba share (optional/easy way to access logs)
-SAMBA_USER="";
-SAMBA_PASS="";
-SAMBA_CONFIG=/etc/samba/smb.conf;
-FILE_SHARE="[$CTF_NAME]
-path = $INSTALLPATH/$CTF_NAME
-valid users = $SAMBA_USER
-read only = no";
 
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
@@ -91,7 +82,7 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if ! ifup $CTF_IFACE
+	if ! ifup $CTF_IFACE 2>&1
 	then
 	    echo "Unable to bring up $CTF_IFACE. Exiting...";
 	    exit 1;
@@ -114,7 +105,7 @@ then
 	echo "VM management network configured. (2/3)";
 	echo "Starting VM management interface...";
 
-	if ! ifup $VM_MANAGEMENT_IFACE
+	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
 	then
 	    echo "Unable to bring up $VM_MANAGEMENT_IFACE. Exiting...";
 	    exit 1;
@@ -138,7 +129,7 @@ then
 	echo "Hypervisor management network configured. (3/3)";
 	echo "Starting Hypervisor management interface...";
 
-	if ! ifup $HV_MANAGEMENT_IFACE
+	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
 	then
 	    echo "Unable to bring up $HV_MANAGEMENT_IFACE. Exiting...";
 	    exit 1;
@@ -519,15 +510,6 @@ echo "Added NGINX service as reverse proxy (4/4).";
 
 echo "Launching platform...";
 
-# cd $INSTALLPATH
-
-#DEV - CREATE SAMBA SHARE FOR DIRECTORY CTFd (easy log access)
-#apt-get install samba -y;
-#echo "$FILE_SHARE" >> "$SAMBA_CONFIG";
-#fill in password & confirm for the smbpasswd command
-#echo -ne "$SAMBA_PASS\n$SAMBA_PASS\n" | smbpasswd -a -s $SAMBA_USER;
-#service smbd restart;
-
 #cleanup apt
 apt-get clean
 
@@ -543,7 +525,6 @@ then
     echo "Unable to launch containers. Exiting...";
     exit 1;
 fi
-
 
 echo "The platform can be reached on https://$CTF_IP.";
 #------------------------------------------------------------------------------------------------------------------#
