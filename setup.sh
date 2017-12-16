@@ -99,7 +99,7 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	if ! ifup $CTF_IFACE 2>error.log 2>>&1
+	if ! ifup $CTF_IFACE 2>error.log 2>&1
 	then
 		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
 	fi
@@ -247,12 +247,12 @@ echo "	secret \"$CTF_DNS_TSIG_KEY\";" >> ./bind/update_key.key;
 echo "};" >> ./bind/update_key.key;
 
 echo "FROM debian:latest" > ./bind/Dockerfile;
-echo "ENV CTF_IP=$CTF_IP" >> ./bind/Dockerfile;
-echo "ENV CTF_DNS_IP=$CTF_DNS_IP" >> ./bind/Dockerfile;
-echo "ENV CTF_REVERSE_DNS=$CTF_REVERSE_DNS" >> ./bind/Dockerfile;
-echo "ENV CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./bind/Dockerfile;
-echo "ENV CTF_DNS_ROOT=$CTF_DNS_ROOT" >> ./bind/Dockerfile;
-echo "ENV CTF_NAME=$CTF_NAME" >> ./bind/Dockerfile;
+echo "ENV CTF_IP=\"$CTF_IP\"" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_IP=\"$CTF_DNS_IP\"" >> ./bind/Dockerfile;
+echo "ENV CTF_REVERSE_DNS=\"$CTF_REVERSE_DNS\"" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_TSIG_KEY=\"$CTF_DNS_TSIG_KEY\"" >> ./bind/Dockerfile;
+echo "ENV CTF_DNS_ROOT=\"$CTF_DNS_ROOT\"" >> ./bind/Dockerfile;
+echo "ENV CTF_NAME=\"$CTF_NAME\"" >> ./bind/Dockerfile;
 echo "RUN apt-get update && apt-get upgrade -y && apt-get install -y bind9" >> ./bind/Dockerfile;
 echo "COPY entrypoint.sh /sbin/entrypoint.sh" >> ./bind/Dockerfile;
 echo "RUN chmod 755 /sbin/entrypoint.sh" >> ./bind/Dockerfile;
@@ -476,9 +476,9 @@ echo "  db:" >> ./CTFd/docker-compose.yml;
 echo "    image: mariadb:latest" >> ./CTFd/docker-compose.yml;
 echo "    restart: always" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
-echo "      - MYSQL_ROOT_PASSWORD=$MARIADB_ROOT_PASS" >> ./CTFd/docker-compose.yml;
-echo "      - MYSQL_USER=$MARIADB_USER" >> ./CTFd/docker-compose.yml;
-echo "      - MYSQL_PASSWORD=$MARIADB_PASS" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_ROOT_PASSWORD=\"$MARIADB_ROOT_PASS\"" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_USER=\"$MARIADB_USER\"" >> ./CTFd/docker-compose.yml;
+echo "      - MYSQL_PASSWORD=\"$MARIADB_PASS\"" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/mysql:/var/lib/mysql" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
@@ -492,7 +492,7 @@ echo "    ports:" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/udp\"" >> ./CTFd/docker-compose.yml;
 echo "      - \"53:53/tcp\"" >> ./CTFd/docker-compose.yml;
 echo "    environment:" >> ./CTFd/docker-compose.yml;
-echo "      - CTF_DNS_TSIG_KEY=$CTF_DNS_TSIG_KEY" >> ./CTFd/docker-compose.yml;
+echo "      - CTF_DNS_TSIG_KEY=\"$CTF_DNS_TSIG_KEY\"" >> ./CTFd/docker-compose.yml;
 echo "    volumes:" >> ./CTFd/docker-compose.yml;
 echo "      - .data/bind:/var/log/bind9" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
