@@ -77,7 +77,10 @@ echo "Configuring CTF Platform network interfaces where necessary..."
 if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
 then
 	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
-	sed -i "/$CTF_IFACE/d" /etc/network/interfaces;
+	echo 'source /etc/network/interfaces.d/*' > /etc/network/interfaces;
+	echo "auto lo" >> /etc/network/interfaces;
+	echo "iface lo inet loopback" >> /etc/network/interfaces;
+	echo "";
 
 	ifdown $CTF_IFACE;
 	#flush intefaces to prevent DHCP issues
