@@ -60,9 +60,9 @@ MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fol
 #print error with message if set, otherwise error will be trapped without message
 error() {
   if [[ -n "$2" ]] ; then
-    echo "Error line $1: $2; Check error.log for more information; exiting with status ${3:-1}"
+    echo "Error line $1: $2; exiting with status ${3:-1}"
   else
-    echo "Error line $1; Check error.log for more information; exiting with status ${3:-1}"
+    echo "Error line $1; exiting with status ${3:-1}"
   fi
   exit "${3:-1}"
 }
@@ -122,7 +122,7 @@ then
 	echo "VM management network configured. (2/3)";
 	echo "Starting VM management interface...";
 
-	if ! ifup $VM_MANAGEMENT_IFACE 2>>error.log 2>&1
+	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
 	then
 		error ${LINENO} "Unable to bring up $VM_MANAGEMENT_IFACE" 1;
 	fi
@@ -145,7 +145,7 @@ then
 	echo "Hypervisor management network configured. (3/3)";
 	echo "Starting Hypervisor management interface...";
 
-	if ! ifup $HV_MANAGEMENT_IFACE 2>>error.log 2>&1
+	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
 	then
 		error ${LINENO} "Unable to bring up $HV_MANAGEMENT_IFACE" 1;
 	fi
@@ -156,7 +156,7 @@ fi
 echo "Testing network connection...";
 
 #If machine has internet, continue
-if ! ping -c 4 8.8.8.8 2>>error.log 2>&1
+if ! ping -c 4 8.8.8.8 2>&1
 then
 	error ${LINENO} "No internet access" 1;
 fi
@@ -169,7 +169,7 @@ echo "Updating package list & upgrading packages...";
 #UPDATES
 apt-get update >/dev/null;
 
-if ! apt-get upgrade -y >/dev/null 2>>error.log 2>&1
+if ! apt-get upgrade -y >/dev/null 2>&1
 then
 	error ${LINENO} "Unable to upgrade packages" 1;
 fi
@@ -201,7 +201,7 @@ echo "Done.";
 echo "Configuring Docker to start on boot...";
 
 # Configure Docker daemon to start on boot
-if ! systemctl enable docker 2>>error.log 2>&1
+if ! systemctl enable docker 2>&1
 then
 	error ${LINENO} "Unable to configure Docker to start on boot" 1;
 fi
@@ -377,7 +377,7 @@ echo "Cloning CTFd into $INSTALLPATH...";
 
 if [ ! -d $INSTALLPATH/CTFd ]
 then
-	if ! git clone ${CTFd_REPOSITORY} 2>>error.log 2>&1
+	if ! git clone ${CTFd_REPOSITORY} 2>&1
 	then
 		error ${LINENO} "Git clone ${CTFd_REPOSITORY} failed" 1;
 	fi
@@ -428,7 +428,7 @@ cd $INSTALLPATH/CTFd/CTFd/plugins;
 #clone plugins to plugin folder
 for i in "${PLUGINS[@]}"
 do
-   	if ! git clone $i 2>>error.log 2>&1
+   	if ! git clone $i 2>&1
 	then
 		error ${LINENO} "Git clone ${PLUGINS[@]} failed" 1;
 	fi
@@ -443,7 +443,7 @@ cd $INSTALLPATH/CTFd/CTFd/themes;
 #clone themes to theme folder
 for i in "${THEMES[@]}"
 do
-   	if ! git clone $i 2>>error.log 2>&1
+   	if ! git clone $i 2>&1
 	then
 		error ${LINENO} "Git clone ${THEMES[@]} failed" 1;
 	fi
@@ -529,7 +529,7 @@ history -c
 cd $INSTALLPATH/CTFd
 
 #LAUNCH PLATFORM IN DOCKER CONTAINER WITH GUNICORN
-if ! docker-compose up 2>>error.log 2>&1
+if ! docker-compose up 2>&1
 then
 	error ${LINENO} "Unable to bring up containers" 1;
 fi
