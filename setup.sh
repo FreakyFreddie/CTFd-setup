@@ -62,13 +62,13 @@ error() {
   local message="$2"
   local code="${3:-1}"
   if [[ -n "$message" ]] ; then
-    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
+    echo "Error near line ${parent_lineno}: ${message}; exiting with status ${code}"
   else
-    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
+    echo "Error near line ${parent_lineno}; exiting with status ${code}"
   fi
   exit "${code}"
 }
-trap 'error ${LINENO}' ERR
+trap 'error ${LINENO}' ERR;
 #-------------------------------------------------------------------------------------------------#
 #--------------------------------------NETWORK CONFIGURATION--------------------------------------#
 echo "Configuring CTF Platform network interfaces where necessary..."
@@ -79,7 +79,7 @@ then
 	echo 'source /etc/network/interfaces.d/*' > /etc/network/interfaces;
 	echo "auto lo" >> /etc/network/interfaces;
 	echo "iface lo inet loopback" >> /etc/network/interfaces;
-	echo "";
+	echo ""
 
 	ifdown $CTF_IFACE;
 	#flush intefaces to prevent DHCP issues
@@ -97,7 +97,10 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
-	ifup $CTF_IFACE;
+	if ! ifup $CTF_IFACE 2>error.log
+	then
+		error ${LINENO} "Unable to bring up $CTF_IFACE." 1;
+	fi
 	echo "Done.";
 fi
 
