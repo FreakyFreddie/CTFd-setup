@@ -63,6 +63,104 @@ error() {
 	exit "${3:-1}"
 }
 #-------------------------------------------------------------------------------------------------#
+#--------------------------------------NETWORK CONFIGURATION--------------------------------------#
+echo "Configuring CTF Platform network interfaces where necessary..."
+
+if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
+then
+	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
+	echo 'source /etc/network/interfaces.d/*' > /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+	echo "auto lo" >> /etc/network/interfaces;
+	echo "iface lo inet loopback" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	ifdown $CTF_IFACE;
+
+	#WRITE NEW CONFIGURATION TO FILE
+	echo "auto $CTF_IFACE" >> /etc/network/interfaces;
+	echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $CTF_IP" >> /etc/network/interfaces;
+	echo "netmask $CTF_SUBNET" >> /etc/network/interfaces;
+	echo "network $CTF_NETWORK" >> /etc/network/interfaces;
+	echo "gateway $CTF_GATEWAY" >> /etc/network/interfaces;
+	echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "CTF network configured. (1/3)";
+	echo "Starting CTF network interface...";
+
+	#flush intefaces to prevent DHCP issues
+	ip addr flush dev $CTF_IFACE;
+
+	if ! ifup $CTF_IFACE 2>&1
+	then
+		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
+	fi
+	echo "Done.";
+fi
+
+if [ "$VM_MANAGEMENT_IFACE_IP" != "$VM_MANAGEMENT_IP" ]
+then
+	ifdown $VM_MANAGEMENT_IFACE;
+
+	#gateway is omitted, add if present
+	echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
+	echo "iface $VM_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $VM_MANAGEMENT_IP" >> /etc/network/interfaces;
+	echo "netmask $VM_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "VM management network configured. (2/3)";
+	echo "Starting VM management interface...";
+
+	ip addr flush dev $VM_MANAGEMENT_IFACE;
+
+	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
+	then
+		error ${LINENO} "Unable to bring up $VM_MANAGEMENT_IFACE" 1;
+	fi
+
+	echo "Done.";
+fi
+
+if [ "$HV_MANAGEMENT_IFACE_IP" != "$HV_MANAGEMENT_IP" ]
+then
+	ifdown $HV_MANAGEMENT_IFACE;
+
+	#gateway is omitted, add if present
+	echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
+	echo "iface $HV_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
+	echo "address $HV_MANAGEMENT_IP" >> /etc/network/interfaces;
+	echo "netmask $HV_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
+	echo "" >> /etc/network/interfaces;
+
+	echo "Hypervisor management network configured. (3/3)";
+	echo "Starting Hypervisor management interface...";
+
+	ip addr flush dev $HV_MANAGEMENT_IFACE;
+
+	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
+	then
+		error ${LINENO} "Unable to bring up $HV_MANAGEMENT_IFACE" 1;
+	fi
+
+	echo "Done.";
+fi
+
+# remove any running leases to help prevent IP change
+rm /var/lib/dhcp/dhclient.*
+
+echo "Testing network connection...";
+
+#If machine has internet, continue
+if ! ping -c 4 8.8.8.8 2>&1
+then
+	error ${LINENO} "No internet access" 1;
+fi
+
+echo "Internet access detected.";
+#--------------------------------------------------------------------------------------------------------#
 #---------------------------------------------PRE INSTALLATION-------------------------------------------#
 echo "Updating package list & upgrading packages...";
 
@@ -416,106 +514,6 @@ echo "      - ctfd" >> ./CTFd/docker-compose.yml;
 echo "" >> ./CTFd/docker-compose.yml;
 
 echo "Added NGINX service as reverse proxy (4/4).";
-
-#--------------------------------------NETWORK CONFIGURATION--------------------------------------#
-echo "Configuring CTF Platform network interfaces where necessary..."
-
-if [ "$CTF_IFACE_IP" != "$CTF_IP" ]
-then
-	#ERASE AUTOMATIC CONFIGURATION FROM /etc/network/interfaces
-	echo 'source /etc/network/interfaces.d/*' > /etc/network/interfaces;
-	echo "" >> /etc/network/interfaces;
-	echo "auto lo" >> /etc/network/interfaces;
-	echo "iface lo inet loopback" >> /etc/network/interfaces;
-	echo "" >> /etc/network/interfaces;
-
-	ifdown $CTF_IFACE;
-
-	#WRITE NEW CONFIGURATION TO FILE
-	echo "auto $CTF_IFACE" >> /etc/network/interfaces;
-	echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
-	echo "address $CTF_IP" >> /etc/network/interfaces;
-	echo "netmask $CTF_SUBNET" >> /etc/network/interfaces;
-	echo "network $CTF_NETWORK" >> /etc/network/interfaces;
-	echo "gateway $CTF_GATEWAY" >> /etc/network/interfaces;
-	echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
-	echo "" >> /etc/network/interfaces;
-
-	echo "CTF network configured. (1/3)";
-	echo "Starting CTF network interface...";
-
-	#flush intefaces to prevent DHCP issues
-	ip addr flush dev $CTF_IFACE;
-
-	if ! ifup $CTF_IFACE 2>&1
-	then
-		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
-	fi
-	echo "Done.";
-fi
-
-if [ "$VM_MANAGEMENT_IFACE_IP" != "$VM_MANAGEMENT_IP" ]
-then
-	ifdown $VM_MANAGEMENT_IFACE;
-
-	#gateway is omitted, add if present
-	echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
-	echo "iface $VM_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
-	echo "address $VM_MANAGEMENT_IP" >> /etc/network/interfaces;
-	echo "netmask $VM_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
-	echo "" >> /etc/network/interfaces;
-
-	echo "VM management network configured. (2/3)";
-	echo "Starting VM management interface...";
-
-	ip addr flush dev $VM_MANAGEMENT_IFACE;
-
-	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
-	then
-		error ${LINENO} "Unable to bring up $VM_MANAGEMENT_IFACE" 1;
-	fi
-
-	echo "Done.";
-fi
-
-if [ "$HV_MANAGEMENT_IFACE_IP" != "$HV_MANAGEMENT_IP" ]
-then
-	ifdown $HV_MANAGEMENT_IFACE;
-
-	#gateway is omitted, add if present
-	echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
-	echo "iface $HV_MANAGEMENT_IFACE inet static" >> /etc/network/interfaces;
-	echo "address $HV_MANAGEMENT_IP" >> /etc/network/interfaces;
-	echo "netmask $HV_MANAGEMENT_SUBNET" >> /etc/network/interfaces;
-	echo "" >> /etc/network/interfaces;
-
-	echo "Hypervisor management network configured. (3/3)";
-	echo "Starting Hypervisor management interface...";
-
-	ip addr flush dev $HV_MANAGEMENT_IFACE;
-
-	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
-	then
-		error ${LINENO} "Unable to bring up $HV_MANAGEMENT_IFACE" 1;
-	fi
-
-	echo "Done.";
-fi
-
-# remove any running leases to help prevent IP change
-rm /var/lib/dhcp/dhclient.*
-
-echo "Testing network connection...";
-
-#If machine has internet, continue
-if ! ping -c 4 8.8.8.8 2>&1
-then
-	error ${LINENO} "No internet access" 1;
-fi
-
-echo "Internet access detected.";
-#--------------------------------------------------------------------------------------------------------#
-
 echo "Launching platform...";
 
 #cleanup apt
