@@ -77,9 +77,6 @@ then
 
 	ifdown $CTF_IFACE;
 
-	#flush intefaces to prevent DHCP issues
-	ip addr flush dev $CTF_IFACE;
-
 	#WRITE NEW CONFIGURATION TO FILE
 	echo "auto $CTF_IFACE" >> /etc/network/interfaces;
 	echo "iface $CTF_IFACE inet static" >> /etc/network/interfaces;
@@ -93,6 +90,9 @@ then
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 
+	#flush intefaces to prevent DHCP issues
+	ip addr flush dev $CTF_IFACE;
+
 	if ! ifup $CTF_IFACE 2>&1
 	then
 		error ${LINENO} "Unable to bring up $CTF_IFACE" 1;
@@ -103,7 +103,6 @@ fi
 if [ "$VM_MANAGEMENT_IFACE_IP" != "$VM_MANAGEMENT_IP" ]
 then
 	ifdown $VM_MANAGEMENT_IFACE;
-	ip addr flush dev $VM_MANAGEMENT_IFACE;
 
 	#gateway is omitted, add if present
 	echo "auto $VM_MANAGEMENT_IFACE" >> /etc/network/interfaces;
@@ -114,6 +113,8 @@ then
 
 	echo "VM management network configured. (2/3)";
 	echo "Starting VM management interface...";
+
+	ip addr flush dev $VM_MANAGEMENT_IFACE;
 
 	if ! ifup $VM_MANAGEMENT_IFACE 2>&1
 	then
@@ -126,7 +127,6 @@ fi
 if [ "$HV_MANAGEMENT_IFACE_IP" != "$HV_MANAGEMENT_IP" ]
 then
 	ifdown $HV_MANAGEMENT_IFACE;
-	ip addr flush dev $HV_MANAGEMENT_IFACE;
 
 	#gateway is omitted, add if present
 	echo "auto $HV_MANAGEMENT_IFACE" >> /etc/network/interfaces;
@@ -138,6 +138,8 @@ then
 	echo "Hypervisor management network configured. (3/3)";
 	echo "Starting Hypervisor management interface...";
 
+	ip addr flush dev $HV_MANAGEMENT_IFACE;
+
 	if ! ifup $HV_MANAGEMENT_IFACE 2>&1
 	then
 		error ${LINENO} "Unable to bring up $HV_MANAGEMENT_IFACE" 1;
@@ -145,6 +147,9 @@ then
 
 	echo "Done.";
 fi
+
+# remove any running leases to help prevent IP change
+rm /var/lib/dhcp/dhclient.*
 
 echo "Testing network connection...";
 
@@ -531,4 +536,7 @@ then
 fi
 
 echo "The platform can be reached on https://$CTF_IP.";
+
+# optionally reboot
+reboot
 #------------------------------------------------------------------------------------------------------------------#
