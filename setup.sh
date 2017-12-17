@@ -87,6 +87,14 @@ then
 	echo "dns-nameservers $CTF_DNS" >> /etc/network/interfaces;
 	echo "" >> /etc/network/interfaces;
 
+	echo "" > /etc/resolv.conf;
+
+	#change currently used nameserver
+	for nameserver in $CTF_DNS
+	do
+	    echo "nameserver $nameserver" >> /etc/resolv.conf;
+	done
+
 	echo "CTF network configured. (1/3)";
 	echo "Starting CTF network interface...";
 

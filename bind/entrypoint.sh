@@ -96,7 +96,7 @@ echo "};" >> /etc/bind/named.conf.options;
 #named.conf.local
 #key to update zone
 echo "key \"update_key\" {" > /etc/bind/named.conf.local;
-echo "  algorithm hmac-md5;" >> /etc/bind/named.conf.local;
+echo "  algorithm hmac-sha512;" >> /etc/bind/named.conf.local;
 echo "  secret \"$CTF_DNS_TSIG_KEY\";" >> /etc/bind/named.conf.local;
 echo "};" >> /etc/bind/named.conf.local;
 
