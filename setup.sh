@@ -534,9 +534,4 @@ if ! docker-compose up 2>&1
 then
 	error ${LINENO} "Unable to bring up containers" 1;
 fi
-
-echo "The platform can be reached on https://$CTF_IP.";
-
-# optionally reboot
-reboot
 #------------------------------------------------------------------------------------------------------------------#
