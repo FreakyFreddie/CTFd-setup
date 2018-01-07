@@ -57,6 +57,8 @@ MARIADB_ROOT_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n
 MARIADB_USER="ctfdtm";
 MARIADB_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1);
 
+#-------------------------------------------------------------------------------------------------#
+#-----------------------------------------ERROR HANDLING------------------------------------------#
 #print error with message if set, otherwise error will be trapped without message
 error() {
 	echo "Error line $1: $2; exiting with status ${3:-1}"
